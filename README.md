@@ -2,6 +2,10 @@
 
 # Kashf (كشف)
 
+[![tests](https://github.com/lilanayele/kashf/actions/workflows/tests.yml/badge.svg)](https://github.com/lilanayele/kashf/actions/workflows/tests.yml)
+![Python](https://img.shields.io/badge/python-3.9%2B-0E2A47)
+![License: MIT](https://img.shields.io/badge/license-MIT-C9A227)
+
 **Explainable detection of trade-based money laundering (TBML) for UAE traders.**
 
 Kashf checks a trading company's invoices, transport documents and counterparties for the red flags of trade-based money laundering: mispriced goods, shipments that never sailed, the same cargo invoiced twice, goods described as something else, money looping between companies, and "independent" buyers and sellers who share a director. Every alert shows the evidence behind it, so a compliance officer can confirm or dismiss it in minutes. The officer makes the final call; Kashf only drafts.
