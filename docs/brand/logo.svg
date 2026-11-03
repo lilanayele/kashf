@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 130" role="img" aria-label="Kashf — trade-based money laundering detection">
+  <g transform="translate(5 5)">
+    <circle cx="52" cy="52" r="34" fill="none" stroke="#0E2A47" stroke-width="9"/>
+    <line x1="77" y1="77" x2="104" y2="104" stroke="#C9A227" stroke-width="13" stroke-linecap="round"/>
+    <g fill="#0E2A47">
+      <rect x="29" y="40" width="14" height="9" rx="1.5"/><rect x="45" y="40" width="14" height="9" rx="1.5"/><rect x="61" y="40" width="14" height="9" rx="1.5"/>
+      <rect x="29" y="53" width="14" height="9" rx="1.5"/><rect x="61" y="53" width="14" height="9" rx="1.5"/>
+    </g>
+    <rect x="45" y="53" width="14" height="9" rx="1.5" fill="#C9A227"/>
+  </g>
+  <text x="132" y="68" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="54" font-weight="800" letter-spacing="1" fill="#0E2A47">KASHF</text>
+  <text x="356" y="68" font-family="'Noto Naskh Arabic', 'Geeza Pro', 'Segoe UI', Tahoma, sans-serif" font-size="46" font-weight="700" fill="#C9A227">كشف</text>
+  <text x="134" y="100" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" letter-spacing="1.6" fill="#5B6B7C">TRADE-BASED MONEY LAUNDERING DETECTION</text>
+</svg>

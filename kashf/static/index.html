@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kashf · TBML review</title>
+<link rel="icon" href="/logo.svg">
+<script src="/static/d3.min.js"></script>
+<style>
+  :root { --navy:#0E2A47; --gold:#C9A227; --ink:#16212d; --mute:#5b6b7c; --line:#e3e7ec; --bg:#f6f7f9;
+          --panel:#fff; --red:#c0392b; --amber:#d68910; --teal:#1f8a7a;
+          --price:#c0392b; --route:#7d5ba6; --documents:#d68910; --graph:#1f6fb2; }
+  * { box-sizing:border-box }
+  body { margin:0; font:14px/1.45 Inter, "Segoe UI", system-ui, -apple-system, sans-serif; color:var(--ink); background:var(--bg) }
+  header { background:var(--panel); border-bottom:1px solid var(--line); padding:12px 24px; display:flex; align-items:center; gap:16px; flex-wrap:wrap }
+  header img { height:44px }
+  header .sp { flex:1 }
+  button, .btn { font:inherit; border:1px solid var(--line); background:var(--panel); color:var(--ink); border-radius:8px; padding:7px 12px; cursor:pointer }
+  button.primary { background:var(--navy); color:#fff; border-color:var(--navy) }
+  main { max-width:1360px; margin:0 auto; padding:20px 24px }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:12px; margin-bottom:16px }
+  .stat { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px 16px }
+  .stat b { display:block; font-size:24px; font-variant-numeric:tabular-nums; color:var(--navy) }
+  .stat small { color:var(--mute) }
+  .stat.alert b { color:var(--red) }
+  .grid { display:grid; grid-template-columns:minmax(0,1.25fr) minmax(0,1fr); gap:16px; align-items:start }
+  @media (max-width:980px) { .grid { grid-template-columns:1fr } }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; overflow:hidden }
+  .card h2 { font-size:14px; margin:0; padding:12px 16px; border-bottom:1px solid var(--line); display:flex; gap:8px; align-items:center }
+  .filters { display:flex; gap:6px; flex-wrap:wrap; padding:10px 16px; border-bottom:1px solid var(--line) }
+  .chip { border-radius:99px; padding:4px 10px; font-size:12px }
+  .chip.on { background:var(--navy); color:#fff; border-color:var(--navy) }
+  input[type=search] { font:inherit; border:1px solid var(--line); border-radius:8px; padding:6px 10px; min-width:200px; flex:1 }
+  .tbl { max-height:640px; overflow:auto }
+  table { width:100%; border-collapse:collapse }
+  th, td { text-align:left; padding:8px 12px; border-bottom:1px solid var(--line); vertical-align:top }
+  th { position:sticky; top:0; background:#fafbfc; font-size:12px; color:var(--mute); font-weight:600 }
+  tr.row { cursor:pointer } tr.row:hover { background:#f3f6fa } tr.row.sel { background:#fbf6e3 }
+  .score { font-weight:700; font-variant-numeric:tabular-nums }
+  .bar { height:4px; border-radius:2px; background:var(--line); margin-top:4px } .bar i { display:block; height:100%; border-radius:2px; background:var(--red) }
+  .reason { color:var(--mute); font-size:12.5px }
+  .dots span { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:3px }
+  .detail { padding:16px }
+  .detail .empty { color:var(--mute); padding:40px 0; text-align:center }
+  .kv { display:grid; grid-template-columns:110px 1fr; gap:4px 10px; font-size:13px; margin:10px 0 14px }
+  .kv div:nth-child(odd) { color:var(--mute) }
+  .sig { border-left:4px solid; background:#fafbfc; border-radius:6px; padding:8px 10px; margin-bottom:8px }
+  .sig .h { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; display:flex; justify-content:space-between }
+  .sig p { margin:4px 0 0; font-size:13px }
+  #net { width:100%; height:300px; border:1px solid var(--line); border-radius:10px; background:#fbfcfd }
+  .legend { font-size:12px; color:var(--mute); display:flex; gap:14px; flex-wrap:wrap; margin:6px 0 0 }
+  .legend i { display:inline-block; width:18px; height:0; border-top:2px solid; vertical-align:middle; margin-right:4px }
+  .pill { font-size:12px; padding:2px 8px; border-radius:99px; font-weight:600 }
+  .pill.high { background:#fbe9e7; color:var(--red) } .pill.elev { background:#fdf2e0; color:var(--amber) } .pill.low { background:#e8f5f2; color:var(--teal) }
+  .note { font-size:12px; color:var(--mute); margin-top:12px }
+  .ents td { font-size:13px }
+</style>
+</head>
+<body>
+<header>
+  <img src="/logo.svg" alt="Kashf">
+  <span class="sp"></span>
+  <label class="btn">Upload CSVs<input id="up" type="file" multiple accept=".csv" hidden></label>
+</header>
+<main>
+  <div class="stats" id="stats"></div>
+  <div class="grid">
+    <div>
+      <div class="card">
+        <h2>Alerts <span class="reason" id="count"></span></h2>
+        <div class="filters" id="filters">
+          <button class="chip on" data-d="">All</button>
+          <button class="chip" data-d="price">Price</button>
+          <button class="chip" data-d="documents">Documents</button>
+          <button class="chip" data-d="graph">Network</button>
+          <button class="chip" data-d="route">Route</button>
+          <input type="search" id="q" placeholder="Search invoice, company, goods…">
+        </div>
+        <div class="tbl"><table><thead><tr><th>Score</th><th>Invoice</th><th>Goods · value</th><th>Main reason</th></tr></thead><tbody id="rows"></tbody></table></div>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <h2>Companies with the most alerts</h2>
+        <div class="tbl" style="max-height:300px"><table class="ents"><thead><tr><th>Company</th><th>Country</th><th>Alerts</th><th>Alert value</th></tr></thead><tbody id="ents"></tbody></table></div>
+      </div>
+    </div>
+    <div class="card"><h2>Case detail</h2><div class="detail" id="detail"><div class="empty">Select an alert to see its evidence.</div></div></div>
+  </div>
+</main>
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const usd = v => "$" + (v >= 1e6 ? (v/1e6).toFixed(2) + "M" : v >= 1e3 ? (v/1e3).toFixed(1) + "k" : v.toFixed(0));
+const COL = {price:"var(--price)", route:"var(--route)", documents:"var(--documents)", graph:"var(--graph)"};
+const NAME = {price:"Price benchmark", route:"Route check", documents:"Document consistency", graph:"Counterparty network"};
+let det = "", sel = null;
+
+async function j(u, o) { const r = await fetch(u, o); if (!r.ok) throw new Error((await r.json()).detail || r.status); return r.json(); }
+
+async function stats() {
+  const s = await j("/api/summary");
+  $("#stats").innerHTML = `
+    <div class="stat"><b>${s.invoices.toLocaleString()}</b><small>invoices reviewed</small></div>
+    <div class="stat alert"><b>${s.alerts.toLocaleString()}</b><small>alerts (${(100*s.alerts/s.invoices).toFixed(1)}%)</small></div>
+    <div class="stat"><b>${usd(s.alert_value_usd)}</b><small>value under alert</small></div>
+    <div class="stat"><b>${s.companies_flagged}</b><small>companies involved</small></div>`;
+}
+async function rows() {
+  const p = new URLSearchParams({limit: 400}); if (det) p.set("detector", det); if ($("#q").value) p.set("q", $("#q").value);
+  const a = await j("/api/alerts?" + p);
+  $("#count").textContent = `· ${a.length}${a.length === 400 ? "+" : ""} shown`;
+  $("#rows").innerHTML = a.map(r => `<tr class="row ${r.invoice_no === sel ? "sel" : ""}" data-id="${esc(r.invoice_no)}">
+    <td><span class="score">${r.score.toFixed(2)}</span><div class="bar"><i style="width:${100*r.score}%"></i></div>
+      <div class="dots">${r.detectors.split(", ").filter(Boolean).map(d => `<span title="${NAME[d]}" style="background:${COL[d]}"></span>`).join("")}</div></td>
+    <td><b>${esc(r.invoice_no)}</b><div class="reason">${esc(r.date)}</div></td>
+    <td>${esc(r.description)}<div class="reason">${usd(r.value_usd)} · ${esc(r.route)}</div></td>
+    <td class="reason">${esc(r.top_reason)}</td></tr>`).join("") || `<tr><td colspan="4" class="reason">No alerts match.</td></tr>`;
+  document.querySelectorAll("tr.row").forEach(tr => tr.onclick = () => show(tr.dataset.id));
+}
+async function ents() {
+  const e = await j("/api/entities?limit=25");
+  $("#ents").innerHTML = e.map(x => `<tr class="row" data-e="${esc(x.entity_id)}"><td><b>${esc(x.name)}</b><div class="reason">${esc(x.entity_id)} · ${esc(x.kind.replace("_"," "))}</div></td>
+    <td>${esc(x.country)}</td><td>${x.alerts}/${x.invoices}</td><td>${usd(x.alert_value_usd)}</td></tr>`).join("");
+}
+async function show(id) {
+  sel = id; document.querySelectorAll("tr.row").forEach(t => t.classList.toggle("sel", t.dataset.id === id));
+  const d = await j("/api/invoice/" + encodeURIComponent(id)), v = d.invoice;
+  const lvl = d.score >= .8 ? ["high","High risk"] : d.alert ? ["elev","Elevated"] : ["low","Low"];
+  $("#detail").innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+      <div><b style="font-size:16px">${esc(v.invoice_no)}</b> <span class="pill ${lvl[0]}">${lvl[1]} · ${d.score.toFixed(2)}</span></div>
+      <a class="btn" href="/api/case/${encodeURIComponent(id)}" download="${esc(id)}-case.md">Download case summary</a>
+    </div>
+    <div class="kv">
+      <div>Seller</div><div>${esc(d.seller.name)} <span class="reason">(${esc(v.seller_id)}, ${esc(d.seller.country)})</span></div>
+      <div>Buyer</div><div>${esc(d.buyer.name)} <span class="reason">(${esc(v.buyer_id)}, ${esc(d.buyer.country)})</span></div>
+      <div>Goods</div><div>HS ${esc(v.hs6)} · ${esc(v.description)}</div>
+      <div>Quantity · price</div><div>${Number(v.quantity).toLocaleString()} ${esc(v.unit)} × $${Number(v.unit_price_usd).toLocaleString()} = <b>$${Number(v.value_usd).toLocaleString()}</b></div>
+      <div>Route · document</div><div>${esc(v.route)} · ${esc(v.doc_no || "none on file")}</div>
+    </div>
+    <div style="font-weight:700;margin-bottom:6px">Evidence</div>
+    ${d.signals.map(s => `<div class="sig" style="border-color:${COL[s.detector]}"><div class="h"><span style="color:${COL[s.detector]}">${NAME[s.detector]} · ${esc(s.rule.replace(/_/g," "))}</span><span class="reason">weight ${s.strength.toFixed(2)}</span></div><p>${esc(s.evidence)}</p></div>`).join("") || '<p class="reason">No red flags.</p>'}
+    <div style="font-weight:700;margin:14px 0 6px">Network around the seller</div>
+    <svg id="net"></svg>
+    <div class="legend"><span><i style="border-color:#9aa5b1"></i>trade</span><span><i style="border-color:var(--red)"></i>trade with alerts</span><span><i style="border-color:var(--gold);border-top-style:dashed"></i>shared director / phone / address</span></div>
+    <p class="note">Weights show how often signals of this kind were laundering on the calibration set. Kashf drafts; the analyst decides.</p>`;
+  net(v.seller_id);
+}
+async function net(eid) {
+  const g = await j(`/api/network/${encodeURIComponent(eid)}?hops=1`);
+  const svg = d3.select("#net"), W = svg.node().clientWidth, H = 300; svg.selectAll("*").remove();
+  const sim = d3.forceSimulation(g.nodes).force("link", d3.forceLink(g.edges).id(d => d.id).distance(70))
+    .force("charge", d3.forceManyBody().strength(-160)).force("center", d3.forceCenter(W/2, H/2)).force("collide", d3.forceCollide(16));
+  const link = svg.append("g").selectAll("line").data(g.edges).join("line")
+    .attr("stroke", d => d.kind === "shared" ? "#C9A227" : d.alert ? "#c0392b" : "#9aa5b1")
+    .attr("stroke-width", d => d.kind === "shared" ? 2 : d.alert ? 2 : 1).attr("stroke-dasharray", d => d.kind === "shared" ? "4 3" : null);
+  link.append("title").text(d => d.kind === "shared" ? "shared " + d.via : `${d.n} invoice(s)`);
+  const node = svg.append("g").selectAll("g").data(g.nodes).join("g").style("cursor", "pointer")
+    .call(d3.drag().on("start", (e, d) => { if (!e.active) sim.alphaTarget(.3).restart(); d.fx = d.x; d.fy = d.y; })
+      .on("drag", (e, d) => { d.fx = e.x; d.fy = e.y; }).on("end", (e, d) => { if (!e.active) sim.alphaTarget(0); d.fx = d.fy = null; }));
+  node.append("circle").attr("r", d => d.focus ? 11 : 7).attr("fill", d => d.focus ? "#0E2A47" : d.alerts ? "#fbe9e7" : "#fff")
+    .attr("stroke", d => d.alerts ? "#c0392b" : "#0E2A47").attr("stroke-width", 1.5);
+  node.append("text").text(d => d.id).attr("x", 13).attr("y", 4).attr("font-size", 10).attr("fill", "#5b6b7c");
+  node.append("title").text(d => `${d.name} (${d.country}) · ${d.alerts} alert(s)`);
+  sim.on("tick", () => {
+    g.nodes.forEach(d => { d.x = Math.max(14, Math.min(W - 40, d.x)); d.y = Math.max(14, Math.min(H - 14, d.y)); });
+    link.attr("x1", d => d.source.x).attr("y1", d => d.source.y).attr("x2", d => d.target.x).attr("y2", d => d.target.y);
+    node.attr("transform", d => `translate(${d.x},${d.y})`);
+  });
+}
+$("#filters").addEventListener("click", e => { if (!e.target.dataset || e.target.dataset.d === undefined) return;
+  det = e.target.dataset.d; document.querySelectorAll(".chip").forEach(c => c.classList.toggle("on", c === e.target)); rows(); });
+let t; $("#q").addEventListener("input", () => { clearTimeout(t); t = setTimeout(rows, 250); });
+$("#up").addEventListener("change", async e => {
+  const fd = new FormData(); [...e.target.files].forEach(f => fd.append("files", f));
+  try { await j("/api/upload", {method: "POST", body: fd}); init(); } catch (err) { alert("Upload failed: " + err.message); }
+});
+async function init() { try { await stats(); await rows(); await ents(); const f = document.querySelector("tr.row"); if (f) show(f.dataset.id); }
+  catch (e) { $("#stats").innerHTML = `<div class="stat">No data loaded. Upload entities.csv, invoices.csv, transport_docs.csv and packing_lists.csv.</div>`; } }
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="Kashf">
+  <rect x="0" y="0" width="120" height="120" rx="26" fill="#0E2A47"/>
+  <g transform="translate(6 6) scale(0.9)">
+    <circle cx="52" cy="52" r="34" fill="none" stroke="#F4F1E8" stroke-width="9"/>
+    <line x1="77" y1="77" x2="104" y2="104" stroke="#C9A227" stroke-width="13" stroke-linecap="round"/>
+    <g fill="#F4F1E8">
+      <rect x="29" y="40" width="14" height="9" rx="1.5"/><rect x="45" y="40" width="14" height="9" rx="1.5"/><rect x="61" y="40" width="14" height="9" rx="1.5"/>
+      <rect x="29" y="53" width="14" height="9" rx="1.5"/><rect x="61" y="53" width="14" height="9" rx="1.5"/>
+    </g>
+    <rect x="45" y="53" width="14" height="9" rx="1.5" fill="#C9A227"/>
+  </g>
+</svg>

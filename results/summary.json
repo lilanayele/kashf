@@ -1,0 +1,670 @@
+{
+  "protocol": {
+    "tuning_seed": 0,
+    "test_seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "invoices_per_seed": 20000
+  },
+  "counts": [
+    {
+      "invoices": 20000,
+      "laundering": 804,
+      "over_invoicing": 120,
+      "under_invoicing": 120,
+      "phantom_shipment": 120,
+      "multiple_invoicing": 120,
+      "misdescription": 120,
+      "circular_trading": 106,
+      "shell_cluster": 98
+    },
+    {
+      "invoices": 20000,
+      "laundering": 814,
+      "over_invoicing": 120,
+      "under_invoicing": 120,
+      "phantom_shipment": 120,
+      "multiple_invoicing": 120,
+      "misdescription": 120,
+      "circular_trading": 103,
+      "shell_cluster": 111
+    },
+    {
+      "invoices": 20000,
+      "laundering": 817,
+      "over_invoicing": 120,
+      "under_invoicing": 120,
+      "phantom_shipment": 120,
+      "multiple_invoicing": 120,
+      "misdescription": 120,
+      "circular_trading": 104,
+      "shell_cluster": 113
+    },
+    {
+      "invoices": 20000,
+      "laundering": 811,
+      "over_invoicing": 120,
+      "under_invoicing": 120,
+      "phantom_shipment": 120,
+      "multiple_invoicing": 120,
+      "misdescription": 120,
+      "circular_trading": 101,
+      "shell_cluster": 110
+    },
+    {
+      "invoices": 20000,
+      "laundering": 818,
+      "over_invoicing": 120,
+      "under_invoicing": 120,
+      "phantom_shipment": 120,
+      "multiple_invoicing": 120,
+      "misdescription": 120,
+      "circular_trading": 110,
+      "shell_cluster": 108
+    }
+  ],
+  "calibration": {
+    "circular_trade": 0.98,
+    "doc_reused": 0.98,
+    "high_risk_party": 0.07027540360873694,
+    "implausible_dates": 0.9761904761904762,
+    "implausible_unit_weight": 0.9743589743589743,
+    "linked_parties": 0.8623188405797102,
+    "no_transport_doc": 0.26973684210526316,
+    "over_priced|z2-3": 0.08869565217391304,
+    "over_priced|z3-4": 0.27358490566037735,
+    "over_priced|z4-5": 0.5681818181818182,
+    "over_priced|z5-7": 0.6981132075471698,
+    "over_priced|z7-inf": 0.9747899159663865,
+    "quantity_mismatch": 0.02,
+    "under_priced|z2-3": 0.09664694280078895,
+    "under_priced|z3-4": 0.2361111111111111,
+    "under_priced|z4-5": 0.5652173913043478,
+    "under_priced|z5-7": 0.6470588235294118,
+    "under_priced|z7-inf": 0.9090909090909091,
+    "unknown_vessel": 0.9761904761904762,
+    "weight_mismatch": 0.9111111111111111
+  },
+  "thresholds": {
+    "kashf_full": 0.4422,
+    "kashf_heuristic": 0.7095,
+    "minus_price": 0.3211,
+    "minus_route": 0.4422,
+    "minus_documents": 0.5652,
+    "minus_graph": 0.4422,
+    "price_only": 0.2361,
+    "checklist": 0.5,
+    "isolation_forest": 0.5242989993008359
+  },
+  "configs": {
+    "kashf_full": {
+      "precision": {
+        "mean": 0.8764637222924054,
+        "sd": 0.012413531166352684
+      },
+      "recall": {
+        "mean": 0.7591161636054325,
+        "sd": 0.007541997022799546
+      },
+      "f1": {
+        "mean": 0.8135708296028887,
+        "sd": 0.009335867361189984
+      },
+      "far": {
+        "mean": 0.004534253042840421,
+        "sd": 0.00047741921061732916
+      },
+      "alerts_per_1000": {
+        "mean": 35.2,
+        "sd": 0.1903943276465976
+      },
+      "avg_precision": {
+        "mean": 0.8448840855577412,
+        "sd": 0.005449948938849002
+      },
+      "recall_by_typology": {
+        "over_invoicing": {
+          "mean": 0.42666666666666664,
+          "sd": 0.021570298509241297
+        },
+        "under_invoicing": {
+          "mean": 0.275,
+          "sd": 0.035843021946010946
+        },
+        "phantom_shipment": {
+          "mean": 0.6666666666666666,
+          "sd": 0.0
+        },
+        "multiple_invoicing": {
+          "mean": 1.0,
+          "sd": 0.0
+        },
+        "misdescription": {
+          "mean": 1.0,
+          "sd": 0.0
+        },
+        "circular_trading": {
+          "mean": 1.0,
+          "sd": 0.0
+        },
+        "shell_cluster": {
+          "mean": 1.0,
+          "sd": 0.0
+        }
+      },
+      "evidence_attribution": {
+        "mean": 1.0,
+        "sd": 0.0
+      }
+    },
+    "kashf_heuristic": {
+      "precision": {
+        "mean": 0.7737799622028272,
+        "sd": 0.008827085825239151
+      },
+      "recall": {
+        "mean": 0.7888751685190382,
+        "sd": 0.012329511586642377
+      },
+      "f1": {
+        "mean": 0.7811899952550309,
+        "sd": 0.007214870737175126
+      },
+      "far": {
+        "mean": 0.009777460126459138,
+        "sd": 0.0005926292193219916
+      },
+      "alerts_per_1000": {
+        "mean": 41.44,
+        "sd": 1.0151354589413182
+      },
+      "avg_precision": {
+        "mean": 0.7970806995120803,
+        "sd": 0.00778793853852659
+      },
+      "recall_by_typology": {
+        "over_invoicing": {
+          "mean": 0.515,
+          "sd": 0.036514837167011066
+        },
+        "under_invoicing": {
+          "mean": 0.35833333333333334,
+          "sd": 0.04894725051862804
+        },
+        "phantom_shipment": {
+          "mean": 0.6966666666666668,
+          "sd": 0.00950146187582615
+        },
+        "multiple_invoicing": {
+          "mean": 1.0,
+          "sd": 0.0
+        },
+        "misdescription": {
+          "mean": 1.0,
+          "sd": 0.0
+        },
+        "circular_trading": {
+          "mean": 1.0,
+          "sd": 0.0
+        },
+        "shell_cluster": {
+          "mean": 1.0,
+          "sd": 0.0
+        }
+      },
+      "evidence_attribution": {
+        "mean": 1.0,
+        "sd": 0.0
+      }
+    },
+    "minus_price": {
+      "precision": {
+        "mean": 0.9346729935952214,
+        "sd": 0.0075360570702961436
+      },
+      "recall": {
+        "mean": 0.5597660003538604,
+        "sd": 0.010583534812434344
+      },
+      "f1": {
+        "mean": 0.7001556520630172,
+        "sd": 0.009385953514722949
+      },
+      "far": {
+        "mean": 0.0016573597877863843,
+        "sd": 0.00019293585453729169
+      },
+      "alerts_per_1000": {
+        "mean": 24.340000000000003,
+        "sd": 0.5188930525647845
+      },
+      "avg_precision": {
+        "mean": 0.6112107969917906,
+        "sd": 0.009067543879573472
+      },
+      "recall_by_typology": {
+        "over_invoicing": {
+          "mean": 0.0,
+          "sd": 0.0
+        },
+        "under_invoicing": {
+          "mean": 0.0,
+          "sd": 0.0
+        },
+        "phantom_shipment": {
+          "mean": 0.685,
+          "sd": 0.013693063937629152
+        },
+        "multiple_invoicing": {
+          "mean": 1.0,
+          "sd": 0.0
+        },
+        "misdescription": {
+          "mean": 0.3333333333333333,
+          "sd": 0.058925565098878974
+        },
+        "circular_trading": {
+          "mean": 1.0,
+          "sd": 0.0
+        },
+        "shell_cluster": {
+          "mean": 1.0,
+          "sd": 0.0
+        }
+      },
+      "evidence_attribution": {
+        "mean": 1.0,
+        "sd": 0.0
+      }
+    },
+    "minus_route": {
+      "precision": {
+        "mean": 0.8764637222924054,
+        "sd": 0.012413531166352684
+      },
+      "recall": {
+        "mean": 0.7591161636054325,
+        "sd": 0.007541997022799546
+      },
+      "f1": {
+        "mean": 0.8135708296028887,
+        "sd": 0.009335867361189984
+      },
+      "far": {
+        "mean": 0.004534253042840421,
+        "sd": 0.00047741921061732916
+      },
+      "alerts_per_1000": {
+        "mean": 35.2,
+        "sd": 0.1903943276465976
+      },
+      "avg_precision": {
+        "mean": 0.8421635127069965,
+        "sd": 0.005482449967252773
+      },
+      "recall_by_typology": {
+        "over_invoicing": {
+          "mean": 0.42666666666666664,
+          "sd": 0.021570298509241297
+        },
+        "under_invoicing": {
+          "mean": 0.275,
+          "sd": 0.035843021946010946
+        },
+        "phantom_shipment": {
+          "mean": 0.6666666666666666,
+          "sd": 0.0
+        },
+        "multiple_invoicing": {
+          "mean": 1.0,
+          "sd": 0.0
+        },
+        "misdescription": {
+          "mean": 1.0,
+          "sd": 0.0
+        },
+        "circular_trading": {
+          "mean": 1.0,
+          "sd": 0.0
+        },
+        "shell_cluster": {
+          "mean": 1.0,
+          "sd": 0.0
+        }
+      },
+      "evidence_attribution": {
+        "mean": 1.0,
+        "sd": 0.0
+      }
+    },
+    "minus_documents": {
+      "precision": {
+        "mean": 0.8417912602395855,
+        "sd": 0.014952138200973136
+      },
+      "recall": {
+        "mean": 0.5130436819524113,
+        "sd": 0.007237334530583007
+      },
+      "f1": {
+        "mean": 0.637521637402679,
+        "sd": 0.009497066686830462
+      },
+      "far": {
+        "mean": 0.004086032870058138,
+        "sd": 0.0004044050859333007
+      },
+      "alerts_per_1000": {
+        "mean": 24.770000000000003,
+        "sd": 0.1890767040118901
+      },
+      "avg_precision": {
+        "mean": 0.5692814449697581,
+        "sd": 0.007530965335534833
+      },
+      "recall_by_typology": {
+        "over_invoicing": {
+          "mean": 0.42666666666666664,
+          "sd": 0.021570298509241297
+        },
+        "under_invoicing": {
+          "mean": 0.275,
+          "sd": 0.035843021946010946
+        },
+        "phantom_shipment": {
+          "mean": 0.0,
+          "sd": 0.0
+        },
+        "multiple_invoicing": {
+          "mean": 0.0,
+          "sd": 0.0
+        },
+        "misdescription": {
+          "mean": 1.0,
+          "sd": 0.0
+        },
+        "circular_trading": {
+          "mean": 1.0,
+          "sd": 0.0
+        },
+        "shell_cluster": {
+          "mean": 1.0,
+          "sd": 0.0
+        }
+      },
+      "evidence_attribution": {
+        "mean": 1.0,
+        "sd": 0.0
+      }
+    },
+    "minus_graph": {
+      "precision": {
+        "mean": 0.8587969411888041,
+        "sd": 0.016305443447002355
+      },
+      "recall": {
+        "mean": 0.4995434624033332,
+        "sd": 0.01008223999523266
+      },
+      "f1": {
+        "mean": 0.6316250205849504,
+        "sd": 0.011206487739622443
+      },
+      "far": {
+        "mean": 0.003481466045546386,
+        "sd": 0.000428589049644754
+      },
+      "alerts_per_1000": {
+        "mean": 23.640000000000004,
+        "sd": 0.28809720581775744
+      },
+      "avg_precision": {
+        "mean": 0.6087991494676356,
+        "sd": 0.011814058419425651
+      },
+      "recall_by_typology": {
+        "over_invoicing": {
+          "mean": 0.42666666666666664,
+          "sd": 0.021570298509241297
+        },
+        "under_invoicing": {
+          "mean": 0.275,
+          "sd": 0.035843021946010946
+        },
+        "phantom_shipment": {
+          "mean": 0.6666666666666666,
+          "sd": 0.0
+        },
+        "multiple_invoicing": {
+          "mean": 1.0,
+          "sd": 0.0
+        },
+        "misdescription": {
+          "mean": 1.0,
+          "sd": 0.0
+        },
+        "circular_trading": {
+          "mean": 0.007692307692307693,
+          "sd": 0.017200522903844537
+        },
+        "shell_cluster": {
+          "mean": 0.00920062295536379,
+          "sd": 0.006283540262167288
+        }
+      },
+      "evidence_attribution": {
+        "mean": 1.0,
+        "sd": 0.0
+      }
+    },
+    "price_only": {
+      "precision": {
+        "mean": 0.5744554737832509,
+        "sd": 0.0152600845700643
+      },
+      "recall": {
+        "mean": 0.31253745074772177,
+        "sd": 0.009163447120150667
+      },
+      "f1": {
+        "mean": 0.4048091028504195,
+        "sd": 0.011107335699566257
+      },
+      "far": {
+        "mean": 0.009808648165011402,
+        "sd": 0.00041009763934089734
+      },
+      "alerts_per_1000": {
+        "mean": 22.109999999999996,
+        "sd": 0.2484954727957832
+      },
+      "avg_precision": {
+        "mean": 0.3108573913023521,
+        "sd": 0.009221612345514277
+      },
+      "recall_by_typology": {
+        "over_invoicing": {
+          "mean": 0.62,
+          "sd": 0.02091650066335186
+        },
+        "under_invoicing": {
+          "mean": 0.4416666666666667,
+          "sd": 0.05559026693385973
+        },
+        "phantom_shipment": {
+          "mean": 0.0016666666666666666,
+          "sd": 0.003726779962499649
+        },
+        "multiple_invoicing": {
+          "mean": 0.0,
+          "sd": 0.0
+        },
+        "misdescription": {
+          "mean": 1.0,
+          "sd": 0.0
+        },
+        "circular_trading": {
+          "mean": 0.028107929806043014,
+          "sd": 0.028081698597751184
+        },
+        "shell_cluster": {
+          "mean": 0.031239142503365003,
+          "sd": 0.01818231251551609
+        }
+      }
+    },
+    "checklist": {
+      "precision": {
+        "mean": 0.11747682032351528,
+        "sd": 0.006277009102900847
+      },
+      "recall": {
+        "mean": 0.5619142083407178,
+        "sd": 0.03752730564960832
+      },
+      "f1": {
+        "mean": 0.19427770406834313,
+        "sd": 0.010271424439089306
+      },
+      "far": {
+        "mean": 0.1789026729932694,
+        "sd": 0.00969885251964589
+      },
+      "alerts_per_1000": {
+        "mean": 194.46999999999997,
+        "sd": 10.285402277013766
+      },
+      "avg_precision": {
+        "mean": 0.08394532370770673,
+        "sd": 0.005674665630204309
+      },
+      "recall_by_typology": {
+        "over_invoicing": {
+          "mean": 0.8933333333333333,
+          "sd": 0.025276251480171867
+        },
+        "under_invoicing": {
+          "mean": 0.8083333333333332,
+          "sd": 0.04487637339278752
+        },
+        "phantom_shipment": {
+          "mean": 0.425,
+          "sd": 0.033850160019316504
+        },
+        "multiple_invoicing": {
+          "mean": 0.16,
+          "sd": 0.07250478911385402
+        },
+        "misdescription": {
+          "mean": 1.0,
+          "sd": 0.0
+        },
+        "circular_trading": {
+          "mean": 0.278272307432809,
+          "sd": 0.12243528801851805
+        },
+        "shell_cluster": {
+          "mean": 0.30546173737071336,
+          "sd": 0.10951360434346791
+        }
+      }
+    },
+    "isolation_forest": {
+      "precision": {
+        "mean": 0.16715568836507017,
+        "sd": 0.0050089131242213964
+      },
+      "recall": {
+        "mean": 0.22735091307649635,
+        "sd": 0.021328143598669965
+      },
+      "f1": {
+        "mean": 0.19232569600506463,
+        "sd": 0.009251679769614598
+      },
+      "far": {
+        "mean": 0.048011642683608975,
+        "sd": 0.004732356468617759
+      },
+      "alerts_per_1000": {
+        "mean": 55.3,
+        "sd": 5.353970489272424
+      },
+      "avg_precision": {
+        "mean": 0.11629585360092096,
+        "sd": 0.004232725448820501
+      },
+      "recall_by_typology": {
+        "over_invoicing": {
+          "mean": 0.10666666666666666,
+          "sd": 0.010865337342004412
+        },
+        "under_invoicing": {
+          "mean": 0.08333333333333334,
+          "sd": 0.04208127057650866
+        },
+        "phantom_shipment": {
+          "mean": 0.6083333333333332,
+          "sd": 0.06319062870042959
+        },
+        "multiple_invoicing": {
+          "mean": 0.03333333333333334,
+          "sd": 0.028867513459481284
+        },
+        "misdescription": {
+          "mean": 0.55,
+          "sd": 0.05034602488997739
+        },
+        "circular_trading": {
+          "mean": 0.0837703632411799,
+          "sd": 0.025039507076410863
+        },
+        "shell_cluster": {
+          "mean": 0.09524484850654256,
+          "sd": 0.0763190714888183
+        }
+      }
+    }
+  },
+  "mispricing_recall": [
+    {
+      "bin": "1-1.5x",
+      "n": 76,
+      "recall": 0.0
+    },
+    {
+      "bin": "1.5-2x",
+      "n": 113,
+      "recall": 0.0
+    },
+    {
+      "bin": "2-3x",
+      "n": 272,
+      "recall": 0.10724383479721936
+    },
+    {
+      "bin": "3-4x",
+      "n": 206,
+      "recall": 0.30838043210383637
+    },
+    {
+      "bin": "4-6x",
+      "n": 254,
+      "recall": 0.4048197061918867
+    },
+    {
+      "bin": "6-10x",
+      "n": 205,
+      "recall": 0.7660793082886106
+    },
+    {
+      "bin": ">10x",
+      "n": 74,
+      "recall": 0.9698412698412697
+    }
+  ]
+}
