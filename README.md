@@ -10,6 +10,8 @@ Kashf checks a trading company's invoices, transport documents and counterpartie
 
 *Kashf (كشف) means "uncovering" in Arabic.*
 
+📄 **Research paper:** [Kashf: Explainable Detection of Trade-Based Money Laundering in UAE Trade Records Using Calibrated Multi-Detector Evidence](paper/Kashf_Research_Paper.pdf) ([Word version](paper/Kashf_Research_Paper.docx))
+
 ## Why
 
 Criminals use trade "to move money, rather than goods", and TBML is hard to spot because each transaction looks like normal business ([FATF and Egmont Group, 2020](https://www.fatf-gafi.org/en/publications/Methodsandtrends/Trade-based-money-laundering-trends-and-developments.html)). The UAE is one of the world's largest re-export hubs, and its 2024 National Risk Assessment lists the misuse of trade through front and shell companies and the misuse of free zones among its money-laundering concerns ([summary](https://www.crowe.com/ae/news/uae-national-risk-assessment-nra-2024)). Trade surveillance tools exist for banks; small traders and the consultancies serving them mostly review invoices by hand.
@@ -107,6 +109,7 @@ kashf/
   evaluate.py     tuning/test protocol, baselines, ablations, figures
   api.py          FastAPI backend;  static/  dashboard, logo, d3
 scripts/fetch_comtrade.py
+paper/            research paper (PDF + Word) and the script that builds it from results/
 results/          summary.json, results.md, calibration.json, figures/
 docs/             dashboard screenshot, brand assets (logo, icon), figures
 tests/
