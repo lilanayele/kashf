@@ -1,5 +1,7 @@
 """Detector settings. Thresholds marked (tuned) are set on the tuning seed by kashf.evaluate."""
 
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 
 

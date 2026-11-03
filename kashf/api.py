@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import io
 from pathlib import Path
+from typing import Optional
 
 import networkx as nx
 import pandas as pd
@@ -61,7 +62,7 @@ def create_app(data_dir: str | Path | None = None) -> FastAPI:
                 "by_detector": {k: int(v) for k, v in by_det.items()}}
 
     @app.get("/api/alerts")
-    def alerts(limit: int = 300, detector: str | None = None, q: str | None = None):
+    def alerts(limit: int = 300, detector: Optional[str] = None, q: Optional[str] = None):
         r = res()
         a = r.invoices[r.invoices["alert"]]
         if detector:

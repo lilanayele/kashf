@@ -63,6 +63,7 @@ What the numbers say:
 ```bash
 git clone https://github.com/lilanayele/kashf && cd kashf
 python3 -m venv .venv && source .venv/bin/activate
+pip install --upgrade pip          # needed on macOS's built-in Python (old pip)
 pip install -e ".[dev]"
 
 kashf generate --seed 7 --out data/demo        # synthetic UAE trade dataset

@@ -7,7 +7,7 @@ name = "kashf"
 version = "0.1.0"
 description = "Explainable detection of trade-based money laundering for UAE traders"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.9"
 license = {text = "MIT"}
 authors = [{name = "Lilan Getachew"}]
 dependencies = ["pandas>=2.0", "numpy>=1.26", "networkx>=3.2", "scikit-learn>=1.4", "matplotlib>=3.8",
