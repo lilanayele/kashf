@@ -354,7 +354,8 @@ def global_distribution(flows: pd.DataFrame, min_reporters: int = 5) -> pd.DataF
     w["luv"] = np.log(w["uv"])
     g = w.groupby(["hs6", "year"])["luv"].agg(
         n_reporters="count", log_median="median",
-        log_mad=lambda x: float(np.median(np.abs(x - np.median(x))))).reset_index()
+        log_mad=lambda x: float(np.median(np.abs(x - np.median(x)))),
+        log_q1=lambda x: float(np.quantile(x, 0.25)), log_q3=lambda x: float(np.quantile(x, 0.75))).reset_index()
     g["basis"] = g["hs6"].map(basis)
     g["enough"] = g["n_reporters"] >= min_reporters
     return g

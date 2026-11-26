@@ -105,6 +105,8 @@ pytz==2026.6
     # via pandas
 pyyaml==6.0.3
     # via -r requirements.in
+rapidfuzz==3.9.7
+    # via -r requirements.in
 scikit-learn==1.6.1
     # via
     #   -r requirements.in

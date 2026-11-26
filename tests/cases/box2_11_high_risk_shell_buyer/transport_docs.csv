@@ -1,0 +1,4 @@
+doc_no,doc_type,carrier_or_vessel,departure_date,quantity,gross_weight_kg,port_load,port_discharge
+BL-C00001,bill_of_lading,MSC Aurora,2025-04-07,2000,2060.4,NZ,VG
+BL-C00002,bill_of_lading,MSC Aurora,2025-05-07,2000,2060.4,NZ,VG
+BL-C00003,bill_of_lading,MSC Aurora,2025-06-07,2000,2060.4,NZ,VG

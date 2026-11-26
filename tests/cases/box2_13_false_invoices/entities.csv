@@ -1,0 +1,4 @@
+entity_id,name,kind,country,address,phone,director_id,bank_account
+IT101,Fratelli Auto Srl,foreign,IT,"IT101 Street 1, City-IT",+99 55 1007 0000,P-IT101,ACC-IT101
+JO101,Levant Import Export Co,foreign,JO,"JO101 Street 1, City-JO",+99 55 1008 0000,P-JO101,ACC-JO101
+LB101,Cedar Trading Sarl,foreign,LB,"LB101 Street 1, City-LB",+99 55 1009 0000,P-LB101,ACC-LB101

@@ -1,0 +1,3 @@
+entity_id,name,kind,country,address,phone,director_id,bank_account
+NZ201,Kiwi Orchards Ltd,foreign,NZ,"NZ201 Street 1, City-NZ",+99 55 1010 0000,P-NZ201,ACC-NZ201
+VG201,Bluewater Holdings Ltd,foreign,VG,"VG201 Street 1, City-VG",+99 55 1011 0000,P-VG201,ACC-VG201

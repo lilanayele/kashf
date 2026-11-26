@@ -51,6 +51,7 @@ class Settings:
     high_risk: tuple[str, ...] = ("XA", "XB", "XC")   # placeholder; from_yaml loads the real FATF lists
     high_risk_note: str = ""              # e.g. "FATF lists as of 2026-10-30", shown in evidence
     max_legs: int = 4
+    u_turn_days: int = 90                 # export from AE and re-import from the same party within this window
     # documents
     qty_tolerance: float = 0.03
     weight_tolerance: float = 0.15
@@ -63,6 +64,9 @@ class Settings:
     cycle_hop_days: int = 60
     cycle_qty_tolerance: float = 0.10
     cycle_max_expansions: int = 200_000
+    entity_resolution: str = "fuzzy"      # "exact" = identifiers must match as written; "fuzzy" = kashf.entities
+    name_similarity: float = 90.0         # rapidfuzz token_sort_ratio (0-100) for near-identical names
+    address_similarity: float = 85.0      # rapidfuzz token_set_ratio (0-100) required alongside a name match
     # scoring
     alert_threshold: float = 0.5          # (tuned) combined score at which an invoice becomes an alert
     calibration: Optional[dict] = None    # rule -> calibrated strength, from kashf.calibrate (None = heuristic)

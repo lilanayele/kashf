@@ -1,0 +1,11 @@
+{
+  "label": "reconstructed from public reports",
+  "source": "FATF and Egmont Group (2020), Trade-Based Money Laundering: Trends and Developments, FATF, Paris. https://www.fatf-gafi.org/en/publications/Methodsandtrends/Trade-based-money-laundering-trends-and-developments.html",
+  "box": "4.7",
+  "page": 52,
+  "country": "Germany",
+  "what_happened": "Two sales partners of car manufacturers received third-party payments from unknown accounts (over EUR 80 million); both partners had the same ultimate beneficial owner.",
+  "reconstruction": "Normal invoices to two buyers that share a director. Kashf links parties only when they trade with each other, and payments are not in the data.",
+  "expect": "blind_spot",
+  "rules": []
+}

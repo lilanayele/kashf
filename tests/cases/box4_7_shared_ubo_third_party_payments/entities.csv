@@ -1,0 +1,4 @@
+entity_id,name,kind,country,address,phone,director_id,bank_account
+DE301,Autowerk AG,foreign,DE,"DE301 Street 1, City-DE",+99 55 1012 0000,P-DE301,ACC-DE301
+XX301,Partner A LLC,foreign,KZ,"XX301 Street 1, City-KZ",+99 55 1013 0000,UBO-1,ACC-XX301
+XX302,Partner B LLC,foreign,KZ,"XX302 Street 1, City-KZ",+99 55 1014 0000,UBO-1,ACC-XX302

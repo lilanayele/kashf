@@ -1,0 +1,80 @@
+{
+  "box2_11_high_risk_shell_buyer": {
+    "box": "2.11",
+    "page": 32,
+    "expect": "evidence",
+    "rules_expected": [
+      "high_risk_party"
+    ],
+    "rules_fired": [
+      "high_risk_party"
+    ],
+    "alerts": 0,
+    "invoices": 3,
+    "max_score": 0.06
+  },
+  "box2_13_false_invoices": {
+    "box": "2.13",
+    "page": 34,
+    "expect": "evidence",
+    "rules_expected": [
+      "no_transport_doc"
+    ],
+    "rules_fired": [
+      "high_risk_party",
+      "no_transport_doc"
+    ],
+    "alerts": 0,
+    "invoices": 3,
+    "max_score": 0.328
+  },
+  "box2_6_vehicle_chain": {
+    "box": "2.6",
+    "page": 22,
+    "expect": "evidence",
+    "rules_expected": [
+      "circular_trade"
+    ],
+    "rules_fired": [
+      "circular_trade",
+      "over_priced"
+    ],
+    "alerts": 8,
+    "invoices": 8,
+    "max_score": 0.982
+  },
+  "box2_8_undervalued_electronics": {
+    "box": "2.8",
+    "page": 24,
+    "expect": "evidence",
+    "rules_expected": [
+      "under_priced"
+    ],
+    "rules_fired": [
+      "under_priced"
+    ],
+    "alerts": 0,
+    "invoices": 4,
+    "max_score": 0.26
+  },
+  "box2_9_bmpe": {
+    "box": "2.9",
+    "page": 28,
+    "expect": "blind_spot",
+    "rules_expected": [],
+    "rules_fired": [],
+    "alerts": 0,
+    "invoices": 3,
+    "max_score": 0.0
+  },
+  "box4_7_shared_ubo_third_party_payments": {
+    "box": "4.7",
+    "page": 52,
+    "expect": "blind_spot",
+    "rules_expected": [],
+    "rules_fired": [],
+    "alerts": 0,
+    "invoices": 4,
+    "max_score": 0.0
+  }
+}

@@ -1,0 +1,563 @@
+{
+  "label": "REAL (UN Comtrade) pairs vs published reports; NOT ground truth for laundering",
+  "eligible_pairs": 9727,
+  "documented_keys": 24,
+  "documented_keys_in_data": 10,
+  "documented_pairs": 10,
+  "gold_import_pairs": 236,
+  "keys_not_in_data": [
+    [
+      "BEN",
+      2022
+    ],
+    [
+      "ERI",
+      2022
+    ],
+    [
+      "ETH",
+      2022
+    ],
+    [
+      "GHA",
+      2020
+    ],
+    [
+      "GHA",
+      2023
+    ],
+    [
+      "LBY",
+      2022
+    ],
+    [
+      "NER",
+      2020
+    ],
+    [
+      "NER",
+      2021
+    ],
+    [
+      "NER",
+      2022
+    ],
+    [
+      "SDN",
+      2023
+    ],
+    [
+      "SSD",
+      2022
+    ],
+    [
+      "TCD",
+      2022
+    ],
+    [
+      "TGO",
+      2022
+    ],
+    [
+      "UGA",
+      2022
+    ]
+  ],
+  "by_kind": {
+    "mirror_discrepancy": {
+      "keys": 9,
+      "in_data": 4
+    },
+    "partner_not_reporting": {
+      "keys": 3,
+      "in_data": 0
+    },
+    "transit_hub": {
+      "keys": 12,
+      "in_data": 6
+    }
+  },
+  "methods": {
+    "kashf_rules": {
+      "keys_flagged": 4,
+      "keys_flagged_by_kind": {
+        "mirror_discrepancy": 4,
+        "transit_hub": 0
+      },
+      "median_best_rank": 4961.5,
+      "median_best_rank_in_gold": 113.5,
+      "precision_at_k": {
+        "10": {
+          "all_pairs": 0.0,
+          "gold_import_pairs": 0.0
+        },
+        "25": {
+          "all_pairs": 0.0,
+          "gold_import_pairs": 0.04
+        },
+        "50": {
+          "all_pairs": 0.0,
+          "gold_import_pairs": 0.08
+        },
+        "100": {
+          "all_pairs": 0.0,
+          "gold_import_pairs": 0.05
+        }
+      },
+      "per_key": [
+        {
+          "id": "GOLD-TRANSIT-2022",
+          "partner": "BDI",
+          "year": 2022,
+          "kind": "transit_hub",
+          "best_rank": 7812,
+          "best_rank_in_gold": 176,
+          "flagged": false
+        },
+        {
+          "id": "GOLD-TRANSIT-2022",
+          "partner": "CAF",
+          "year": 2022,
+          "kind": "transit_hub",
+          "best_rank": 9626,
+          "best_rank_in_gold": 236,
+          "flagged": false
+        },
+        {
+          "id": "GOLD-TRANSIT-2022",
+          "partner": "EGY",
+          "year": 2022,
+          "kind": "transit_hub",
+          "best_rank": 7961,
+          "best_rank_in_gold": 182,
+          "flagged": false
+        },
+        {
+          "id": "GOLD-GHA-2020-23",
+          "partner": "GHA",
+          "year": 2021,
+          "kind": "mirror_discrepancy",
+          "best_rank": 628,
+          "best_rank_in_gold": 43,
+          "flagged": true
+        },
+        {
+          "id": "GOLD-GHA-2022",
+          "partner": "GHA",
+          "year": 2022,
+          "kind": "mirror_discrepancy",
+          "best_rank": 252,
+          "best_rank_in_gold": 26,
+          "flagged": true
+        },
+        {
+          "id": "GOLD-MLI-2021",
+          "partner": "MLI",
+          "year": 2021,
+          "kind": "mirror_discrepancy",
+          "best_rank": 185,
+          "best_rank_in_gold": 17,
+          "flagged": true
+        },
+        {
+          "id": "GOLD-MLI-2022",
+          "partner": "MLI",
+          "year": 2022,
+          "kind": "mirror_discrepancy",
+          "best_rank": 409,
+          "best_rank_in_gold": 36,
+          "flagged": true
+        },
+        {
+          "id": "GOLD-TRANSIT-2022",
+          "partner": "RWA",
+          "year": 2022,
+          "kind": "transit_hub",
+          "best_rank": 7353,
+          "best_rank_in_gold": 156,
+          "flagged": false
+        },
+        {
+          "id": "GOLD-HUBS-2023",
+          "partner": "RWA",
+          "year": 2023,
+          "kind": "transit_hub",
+          "best_rank": 7239,
+          "best_rank_in_gold": 153,
+          "flagged": false
+        },
+        {
+          "id": "GOLD-HUBS-2023",
+          "partner": "UGA",
+          "year": 2023,
+          "kind": "transit_hub",
+          "best_rank": 2684,
+          "best_rank_in_gold": 74,
+          "flagged": false
+        }
+      ]
+    },
+    "isolation_forest": {
+      "keys_flagged": 4,
+      "keys_flagged_by_kind": {
+        "mirror_discrepancy": 4,
+        "transit_hub": 0
+      },
+      "median_best_rank": 5000.5,
+      "median_best_rank_in_gold": 86.0,
+      "precision_at_k": {
+        "10": {
+          "all_pairs": 0.0,
+          "gold_import_pairs": 0.1
+        },
+        "25": {
+          "all_pairs": 0.04,
+          "gold_import_pairs": 0.16
+        },
+        "50": {
+          "all_pairs": 0.02,
+          "gold_import_pairs": 0.08
+        },
+        "100": {
+          "all_pairs": 0.01,
+          "gold_import_pairs": 0.07
+        }
+      },
+      "per_key": [
+        {
+          "id": "GOLD-TRANSIT-2022",
+          "partner": "BDI",
+          "year": 2022,
+          "kind": "transit_hub",
+          "best_rank": 8654,
+          "best_rank_in_gold": 178,
+          "flagged": false
+        },
+        {
+          "id": "GOLD-TRANSIT-2022",
+          "partner": "CAF",
+          "year": 2022,
+          "kind": "transit_hub",
+          "best_rank": 5487,
+          "best_rank_in_gold": 93,
+          "flagged": false
+        },
+        {
+          "id": "GOLD-TRANSIT-2022",
+          "partner": "EGY",
+          "year": 2022,
+          "kind": "transit_hub",
+          "best_rank": 4514,
+          "best_rank_in_gold": 79,
+          "flagged": false
+        },
+        {
+          "id": "GOLD-GHA-2020-23",
+          "partner": "GHA",
+          "year": 2021,
+          "kind": "mirror_discrepancy",
+          "best_rank": 356,
+          "best_rank_in_gold": 19,
+          "flagged": true
+        },
+        {
+          "id": "GOLD-GHA-2022",
+          "partner": "GHA",
+          "year": 2022,
+          "kind": "mirror_discrepancy",
+          "best_rank": 463,
+          "best_rank_in_gold": 25,
+          "flagged": true
+        },
+        {
+          "id": "GOLD-MLI-2021",
+          "partner": "MLI",
+          "year": 2021,
+          "kind": "mirror_discrepancy",
+          "best_rank": 15,
+          "best_rank_in_gold": 1,
+          "flagged": true
+        },
+        {
+          "id": "GOLD-MLI-2022",
+          "partner": "MLI",
+          "year": 2022,
+          "kind": "mirror_discrepancy",
+          "best_rank": 236,
+          "best_rank_in_gold": 13,
+          "flagged": true
+        },
+        {
+          "id": "GOLD-TRANSIT-2022",
+          "partner": "RWA",
+          "year": 2022,
+          "kind": "transit_hub",
+          "best_rank": 8412,
+          "best_rank_in_gold": 166,
+          "flagged": false
+        },
+        {
+          "id": "GOLD-HUBS-2023",
+          "partner": "RWA",
+          "year": 2023,
+          "kind": "transit_hub",
+          "best_rank": 8365,
+          "best_rank_in_gold": 164,
+          "flagged": false
+        },
+        {
+          "id": "GOLD-HUBS-2023",
+          "partner": "UGA",
+          "year": 2023,
+          "kind": "transit_hub",
+          "best_rank": 6055,
+          "best_rank_in_gold": 98,
+          "flagged": false
+        }
+      ]
+    },
+    "gfi_gap": {
+      "keys_flagged": 6,
+      "keys_flagged_by_kind": {
+        "mirror_discrepancy": 4,
+        "transit_hub": 2
+      },
+      "median_best_rank": 361.0,
+      "median_best_rank_in_gold": 46.0,
+      "precision_at_k": {
+        "10": {
+          "all_pairs": 0.2,
+          "gold_import_pairs": 0.3
+        },
+        "25": {
+          "all_pairs": 0.12,
+          "gold_import_pairs": 0.2
+        },
+        "50": {
+          "all_pairs": 0.06,
+          "gold_import_pairs": 0.1
+        },
+        "100": {
+          "all_pairs": 0.05,
+          "gold_import_pairs": 0.06
+        }
+      },
+      "per_key": [
+        {
+          "id": "GOLD-TRANSIT-2022",
+          "partner": "BDI",
+          "year": 2022,
+          "kind": "transit_hub",
+          "best_rank": 2282,
+          "best_rank_in_gold": 164,
+          "flagged": false
+        },
+        {
+          "id": "GOLD-TRANSIT-2022",
+          "partner": "CAF",
+          "year": 2022,
+          "kind": "transit_hub",
+          "best_rank": 7656,
+          "best_rank_in_gold": 210,
+          "flagged": false
+        },
+        {
+          "id": "GOLD-TRANSIT-2022",
+          "partner": "EGY",
+          "year": 2022,
+          "kind": "transit_hub",
+          "best_rank": 9540,
+          "best_rank_in_gold": 232,
+          "flagged": false
+        },
+        {
+          "id": "GOLD-GHA-2020-23",
+          "partner": "GHA",
+          "year": 2021,
+          "kind": "mirror_discrepancy",
+          "best_rank": 56,
+          "best_rank_in_gold": 12,
+          "flagged": true
+        },
+        {
+          "id": "GOLD-GHA-2022",
+          "partner": "GHA",
+          "year": 2022,
+          "kind": "mirror_discrepancy",
+          "best_rank": 12,
+          "best_rank_in_gold": 6,
+          "flagged": true
+        },
+        {
+          "id": "GOLD-MLI-2021",
+          "partner": "MLI",
+          "year": 2021,
+          "kind": "mirror_discrepancy",
+          "best_rank": 6,
+          "best_rank_in_gold": 2,
+          "flagged": true
+        },
+        {
+          "id": "GOLD-MLI-2022",
+          "partner": "MLI",
+          "year": 2022,
+          "kind": "mirror_discrepancy",
+          "best_rank": 8,
+          "best_rank_in_gold": 4,
+          "flagged": true
+        },
+        {
+          "id": "GOLD-TRANSIT-2022",
+          "partner": "RWA",
+          "year": 2022,
+          "kind": "transit_hub",
+          "best_rank": 978,
+          "best_rank_in_gold": 112,
+          "flagged": false
+        },
+        {
+          "id": "GOLD-HUBS-2023",
+          "partner": "RWA",
+          "year": 2023,
+          "kind": "transit_hub",
+          "best_rank": 656,
+          "best_rank_in_gold": 79,
+          "flagged": true
+        },
+        {
+          "id": "GOLD-HUBS-2023",
+          "partner": "UGA",
+          "year": 2023,
+          "kind": "transit_hub",
+          "best_rank": 66,
+          "best_rank_in_gold": 13,
+          "flagged": true
+        }
+      ]
+    },
+    "iqr_filter": {
+      "keys_flagged": 0,
+      "keys_flagged_by_kind": {
+        "mirror_discrepancy": 0,
+        "transit_hub": 0
+      },
+      "median_best_rank": 4572.5,
+      "median_best_rank_in_gold": 68.0,
+      "precision_at_k": {
+        "10": {
+          "all_pairs": 0.0,
+          "gold_import_pairs": 0.0
+        },
+        "25": {
+          "all_pairs": 0.0,
+          "gold_import_pairs": 0.04
+        },
+        "50": {
+          "all_pairs": 0.0,
+          "gold_import_pairs": 0.06
+        },
+        "100": {
+          "all_pairs": 0.0,
+          "gold_import_pairs": 0.07
+        }
+      },
+      "per_key": [
+        {
+          "id": "GOLD-TRANSIT-2022",
+          "partner": "BDI",
+          "year": 2022,
+          "kind": "transit_hub",
+          "best_rank": 5131,
+          "best_rank_in_gold": 90,
+          "flagged": false
+        },
+        {
+          "id": "GOLD-TRANSIT-2022",
+          "partner": "CAF",
+          "year": 2022,
+          "kind": "transit_hub",
+          "best_rank": 8078,
+          "best_rank_in_gold": 125,
+          "flagged": false
+        },
+        {
+          "id": "GOLD-TRANSIT-2022",
+          "partner": "EGY",
+          "year": 2022,
+          "kind": "transit_hub",
+          "best_rank": 9599,
+          "best_rank_in_gold": 220,
+          "flagged": false
+        },
+        {
+          "id": "GOLD-GHA-2020-23",
+          "partner": "GHA",
+          "year": 2021,
+          "kind": "mirror_discrepancy",
+          "best_rank": 1945,
+          "best_rank_in_gold": 28,
+          "flagged": false
+        },
+        {
+          "id": "GOLD-GHA-2022",
+          "partner": "GHA",
+          "year": 2022,
+          "kind": "mirror_discrepancy",
+          "best_rank": 8346,
+          "best_rank_in_gold": 149,
+          "flagged": false
+        },
+        {
+          "id": "GOLD-MLI-2021",
+          "partner": "MLI",
+          "year": 2021,
+          "kind": "mirror_discrepancy",
+          "best_rank": 2576,
+          "best_rank_in_gold": 34,
+          "flagged": false
+        },
+        {
+          "id": "GOLD-MLI-2022",
+          "partner": "MLI",
+          "year": 2022,
+          "kind": "mirror_discrepancy",
+          "best_rank": 1272,
+          "best_rank_in_gold": 24,
+          "flagged": false
+        },
+        {
+          "id": "GOLD-TRANSIT-2022",
+          "partner": "RWA",
+          "year": 2022,
+          "kind": "transit_hub",
+          "best_rank": 4488,
+          "best_rank_in_gold": 63,
+          "flagged": false
+        },
+        {
+          "id": "GOLD-HUBS-2023",
+          "partner": "RWA",
+          "year": 2023,
+          "kind": "transit_hub",
+          "best_rank": 4510,
+          "best_rank_in_gold": 65,
+          "flagged": false
+        },
+        {
+          "id": "GOLD-HUBS-2023",
+          "partner": "UGA",
+          "year": 2023,
+          "kind": "transit_hub",
+          "best_rank": 4635,
+          "best_rank_in_gold": 71,
+          "flagged": false
+        }
+      ]
+    }
+  },
+  "random": {
+    "precision_all_pairs": 0.0010280662074637606,
+    "precision_gold_import_pairs": 0.0423728813559322,
+    "expected_median_best_rank_note": "a random ranking puts a key's best of n pairs near N/(n+1)"
+  }
+}

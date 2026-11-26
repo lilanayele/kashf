@@ -1,0 +1,9 @@
+doc_no,doc_type,carrier_or_vessel,departure_date,quantity,gross_weight_kg,port_load,port_discharge
+BL-C00001,bill_of_lading,MSC Aurora,2025-03-08,6,8787.0,IT,DE
+BL-C00002,bill_of_lading,MSC Aurora,2025-03-15,6,8787.0,DE,ES
+BL-C00003,bill_of_lading,MSC Aurora,2025-03-22,6,8787.0,ES,IT
+BL-C00004,bill_of_lading,MSC Aurora,2025-03-29,6,8787.0,IT,IT
+BL-C00005,bill_of_lading,MSC Aurora,2025-06-08,6,8787.0,IT,DE
+BL-C00006,bill_of_lading,MSC Aurora,2025-06-15,6,8787.0,DE,ES
+BL-C00007,bill_of_lading,MSC Aurora,2025-06-22,6,8787.0,ES,IT
+BL-C00008,bill_of_lading,MSC Aurora,2025-06-29,6,8787.0,IT,IT

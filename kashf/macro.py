@@ -148,6 +148,9 @@ def add_unit_value_z(pairs: pd.DataFrame, dist: pd.DataFrame, cif_fob: float = 0
         p[f"uv_{side}"] = uv
         p[f"uv_z_{side}"] = np.where(ok & np.isfinite(z), z, np.nan)
     p["uv_basis"] = basis
+    if "log_q1" in d:                                    # for the IQR price-filter baseline (kashf.baselines)
+        p["uv_log_q1"] = np.where(ok, d["log_q1"].reindex(idx).values, np.nan)
+        p["uv_log_q3"] = np.where(ok, d["log_q3"].reindex(idx).values, np.nan)
     p["uv_median"] = np.exp(med)
     p["uv_log_mad"] = mad
     return p
@@ -344,7 +347,7 @@ def inject(p: pd.DataFrame, size: float, share: float, rng: np.random.Generator,
     return q, y
 
 
-def evaluate_injection(p: pd.DataFrame, cfg: dict, seed: int = 0) -> pd.DataFrame:
+def evaluate_injection(p: pd.DataFrame, cfg: dict, seed: int = 0, with_baselines: bool = True) -> pd.DataFrame:
     """Recall, precision and PR-AUC vs injection size for rules and Isolation Forest.
 
     Precision here is a LOWER BOUND: real flows that are flagged but not injected count as
@@ -360,8 +363,17 @@ def evaluate_injection(p: pd.DataFrame, cfg: dict, seed: int = 0) -> pd.DataFram
             q, y = inject(p, float(size), float(cfg["injection_share"]), rng, c)
             r = rules(q, cfg)
             f, _, _ = iforest(q, cfg, seed=rep)
-            for name, flag, score in (("rules", r["rule_flag"].values, r["rule_score"].values),
-                                      ("iforest", f["if_flag"].values, f["if_score"].values)):
+            methods = [("rules", r["rule_flag"].values, r["rule_score"].values),
+                       ("iforest", f["if_flag"].values, f["if_score"].values)]
+            if with_baselines:
+                from kashf import baselines
+                k = int(round(float(base["rule_flag"].mean()) * len(q)))   # same flag rate as the rules
+                g = baselines.gfi_gap(q, c)
+                methods.append(("gfi_gap_topk", baselines.top_k(g, k), g))
+                if "uv_log_q1" in q:
+                    iq = baselines.iqr_filter(q)
+                    methods += [("iqr_filter", iq > 0, iq), ("iqr_filter_topk", baselines.top_k(iq, k), iq)]
+            for name, flag, score in methods:
                 tp = int((flag & y).sum())
                 fresh = y & ~pre_flag      # injected rows that rules did not already flag before injection
                 rows.append({"size": size, "repeat": rep, "method": name, "n_pairs": len(q),

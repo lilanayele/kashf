@@ -9,7 +9,7 @@
       5
     ],
     "invoices_per_seed": 20000,
-    "alert_threshold": 0.4422,
+    "alert_threshold": 0.3337,
     "attribution_by_typology": {
       "over_invoicing": {
         "mean": 1.0,
@@ -38,34 +38,46 @@
       "shell_cluster": {
         "mean": 1.0,
         "seeds": 5
+      },
+      "transshipment_high_risk": {
+        "mean": 1.0,
+        "seeds": 5
+      },
+      "u_turn": {
+        "mean": 1.0,
+        "seeds": 5
+      },
+      "name_variant": {
+        "mean": 0.9946708463949843,
+        "seeds": 5
       }
     },
     "deletion": {
       "all_alerts": {
-        "alerts": 3517,
-        "drop_top_removes_alert": 0.8837077054307648,
-        "drop_random_removes_alert": 0.7591697469434177,
-        "top_signal_alone_is_alert": 0.9994313335228888
+        "alerts": 4480,
+        "drop_top_removes_alert": 0.90625,
+        "drop_random_removes_alert": 0.7560267857142857,
+        "top_signal_alone_is_alert": 0.9354910714285715
       },
       "multi_signal_alerts": {
-        "alerts": 1249,
-        "drop_top_removes_alert": 0.6725380304243395,
-        "drop_random_removes_alert": 0.32185748598879105,
-        "top_signal_alone_is_alert": 0.9983987189751802
+        "alerts": 1928,
+        "drop_top_removes_alert": 0.7821576763485477,
+        "drop_random_removes_alert": 0.43309128630705396,
+        "top_signal_alone_is_alert": 0.850103734439834
       },
       "true_alerts": {
-        "alerts": 3085,
-        "drop_top_removes_alert": 0.8674230145867099,
-        "drop_random_removes_alert": 0.7461912479740681,
-        "top_signal_alone_is_alert": 1.0
+        "alerts": 3899,
+        "drop_top_removes_alert": 0.8925365478327776,
+        "drop_random_removes_alert": 0.7381379840984867,
+        "top_signal_alone_is_alert": 0.9728135419338292
       },
       "false_alerts": {
-        "alerts": 432,
-        "drop_top_removes_alert": 1.0,
-        "drop_random_removes_alert": 0.8518518518518519,
-        "top_signal_alone_is_alert": 0.9953703703703703
+        "alerts": 581,
+        "drop_top_removes_alert": 0.9982788296041308,
+        "drop_random_removes_alert": 0.8760757314974182,
+        "top_signal_alone_is_alert": 0.685025817555938
       },
-      "share_single_signal": 0.6448677850440716
+      "share_single_signal": 0.5696428571428571
     }
   },
   "macro": {

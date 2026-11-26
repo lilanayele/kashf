@@ -1,0 +1,4 @@
+invoice_no,date,seller_id,buyer_id,hs6,description,quantity,unit,unit_price_usd,value_usd,declared_weight_kg,origin,destination,route,doc_no
+CASE-0001,2025-05-10,IT101,JO101,870323,Passenger cars 1.5-3.0L,4,unit,19000.0,76000.0,5800.0,IT,JO,IT>JO,
+CASE-0002,2025-05-11,IT101,LB101,870323,Passenger cars 1.5-3.0L,4,unit,19000.0,76000.0,5800.0,IT,LB,IT>LB,
+CASE-0003,2025-05-12,IT101,JO101,870323,Passenger cars 1.5-3.0L,4,unit,19000.0,76000.0,5800.0,IT,JO,IT>JO,

@@ -9,6 +9,8 @@ output/
 # derived from UN Comtrade (small, needed by the live demo); raw pulls in data/raw/ stay local
 !data/reference_comtrade.csv
 !data/reference_comtrade_detail.csv
+# external validation set (citations to published reports, no Comtrade data)
+!data/external_validation.csv
 
 # secrets
 .env

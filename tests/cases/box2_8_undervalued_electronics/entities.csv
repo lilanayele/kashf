@@ -1,0 +1,4 @@
+entity_id,name,kind,country,address,phone,director_id,bank_account
+AU001,Southern Devices Pty Ltd,foreign,AU,"AU001 Street 1, City-AU",+99 55 1000 0000,P-AU001,ACC-AU001
+SG001,Lion Gate Trading Pte,foreign,SG,"SG001 Street 1, City-SG",+99 55 1001 0000,P-SG001,ACC-SG001
+AE001,Harbour Electronics FZE,uae_freezone,AE,"AE001 Street 1, City-AE",+99 55 1002 0000,P-AE001,ACC-AE001

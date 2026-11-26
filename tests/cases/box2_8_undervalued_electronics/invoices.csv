@@ -1,0 +1,5 @@
+invoice_no,date,seller_id,buyer_id,hs6,description,quantity,unit,unit_price_usd,value_usd,declared_weight_kg,origin,destination,route,doc_no
+CASE-0001,2025-02-10,AU001,SG001,851713,Smartphones,400,unit,36.0,14400.0,140.0,AU,SG,AU>SG,BL-C00001
+CASE-0002,2025-03-10,AU001,AE001,851713,Smartphones,400,unit,37.0,14800.0,140.0,AU,AE,AU>AE,BL-C00002
+CASE-0003,2025-04-10,AU001,SG001,851713,Smartphones,400,unit,38.0,15200.0,140.0,AU,SG,AU>SG,BL-C00003
+CASE-0004,2025-05-10,AU001,AE001,851713,Smartphones,400,unit,39.0,15600.0,140.0,AU,AE,AU>AE,BL-C00004

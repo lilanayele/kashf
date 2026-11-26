@@ -15,9 +15,20 @@ through regional hubs, legitimate trade with high-risk jurisdictions, free-zone
 business centres where many unrelated companies share an address, related-party
 groups, short shipments and missing paperwork.
 
-Seven typologies are planted (FATF/Egmont 2020 and 2021 indicators):
+Ten typologies are planted (FATF/Egmont 2020 and 2021 indicators):
     over_invoicing, under_invoicing, phantom_shipment, multiple_invoicing,
-    misdescription, circular_trading, shell_cluster
+    misdescription, circular_trading, shell_cluster,
+    transshipment_high_risk  goods routed through a FATF-listed jurisdiction and extra hubs for no
+                             commercial reason ("transshipment through one or more jurisdictions,
+                             including high-risk ones, for no apparent economic reason")
+    u_turn                   goods exported from the UAE come back from the same foreign party at a
+                             higher price ("U-turn" / round-tripping of the same goods)
+    name_variant             a shell network that registers the same company several times with
+                             spelling variants and differently formatted phones/addresses, so no
+                             identifier matches exactly (tests entity resolution)
+
+Legitimate look-alikes are planted too: routes calling at FATF-listed ports that are ordinary
+regional hubs (LEGIT_LISTED_HUBS) and genuine returns of goods to the UAE seller.
 """
 
 from __future__ import annotations
@@ -37,6 +48,10 @@ from kashf.reference import default_table
 PARTNERS = ["IN", "CN", "PK", "SA", "OM", "IQ", "KE", "ET", "TR", "GB", "DE", "US", "HK", "SG", "EG"]
 HIGH_RISK = ["IR", "MM", "YE"]  # synthetic companies placed in FATF-listed jurisdictions (configs/fatf_lists.yaml)
 HUBS = ["OM", "SA", "SG", "HK", "IN"]
+LEGIT_LISTED_HUBS = ["KW", "KE", "VN"]   # on the FATF increased-monitoring list (30 Oct 2026) but busy legitimate ports
+ABBREV_VARIANTS = {"General Trading": ["Gen. Trdg", "General Trdg", "Gen Trading"], "Commodities": ["Comm.", "Commodities"],
+                   "Enterprises": ["Ent.", "Enterprises"], "Electronics": ["Elec.", "Electronics"],
+                   "Holdings": ["Hldgs", "Holdings"]}
 VESSELS = ["MSC Aurora", "Maersk Halifax", "CMA CGM Tigris", "Hapag Al Zubara", "COSCO Pride",
            "ONE Harmony", "Evergreen Ever Gentle", "Yang Ming Wish", "MSC Gulsun", "Maersk Essen"]
 FREEZONE_CENTRES = ["Business Centre 1, JAFZA South", "Business Centre 2, JAFZA North",
@@ -71,6 +86,17 @@ class Config:
     clearance_range: tuple[float, float] = (0.45, 0.75)
     over_range: tuple[float, float] = (1.8, 8.0)
     under_range: tuple[float, float] = (0.12, 0.55)
+    legit_listed_transit_rate: float = 0.03   # clean routes calling at a FATF-listed regional hub
+    legit_return_rate: float = 0.003          # clean UAE exports later returned by the buyer
+    n_name_variant_clusters: int = 8
+    # typology mechanics (defaults = the published benchmark; kashf.evaluate.ALT_TYPOLOGIES changes them)
+    ring_size: tuple[int, int] = (3, 5)          # companies per circular ring (upper bound exclusive)
+    ring_hop_days: tuple[int, int] = (3, 15)
+    ring_price_drift: tuple[float, float] = (1.0, 1.12)
+    ring_qty_jitter: float = 0.0                  # relative change of quantity at each hop
+    shell_links: tuple[float, float, float] = (0.6, 0.25, 0.15)   # director / phone / address; rest = bank account
+    phantom_weight_range: tuple[float, float] = (0.05, 0.3)
+    multiple_split: bool = False                  # second invoice re-uses the B/L but splits the quantity
 
 
 class World:
@@ -216,7 +242,7 @@ class World:
                 dep = when + timedelta(days=int(self.rng.integers(150, 300)))
                 vessel = "UNKNOWN"
             elif doc == "bad_weight":   # phantom: nowhere near the declared cargo
-                dw = weight * self.rng.uniform(0.05, 0.3)
+                dw = weight * self.rng.uniform(*self.cfg.phantom_weight_range)
             self.docs.append({
                 "doc_no": dn, "doc_type": "bill_of_lading" if mode == "sea" else "air_waybill",
                 "carrier_or_vessel": vessel, "departure_date": dep.isoformat(), "quantity": dq,
@@ -247,7 +273,16 @@ class World:
                 price *= self.rng.uniform(*c.clearance_range)
             d = self.rng.random()
             doc = "missing" if d < 0.005 else "short" if d < 0.01 else "rounding" if d < 0.03 else "normal"
-            self.add_invoice(s, b, hs, unit_price=price, doc=doc)
+            route = None
+            if self.rng.random() < c.legit_listed_transit_rate:     # ordinary call at a listed regional port
+                o, dd = self.country[s], self.country[b]
+                hub = str(self.rng.choice([h for h in LEGIT_LISTED_HUBS if h not in (o, dd)]))
+                route = f"{o}>{hub}>{dd}"
+            inv = self.add_invoice(s, b, hs, unit_price=price, doc=doc, route=route)
+            if inv["origin"] == "AE" and inv["destination"] != "AE" and self.rng.random() < c.legit_return_rate:
+                when = date.fromisoformat(inv["date"]) + timedelta(days=int(self.rng.integers(10, 80)))
+                self.add_invoice(b, s, hs, qty=inv["quantity"], when=when,       # return at or below the price paid
+                                 unit_price=inv["unit_price_usd"] * self.rng.uniform(0.6, 1.0))
 
     def related_party_groups(self, n_groups: int = 5) -> None:
         """Legitimate groups: two companies with the same owner trading normally (disclosed)."""
@@ -282,9 +317,10 @@ class World:
             first = self.add_invoice(s, b1, hs, label="multiple_invoicing")
             b2 = str(self.rng.choice([e for e in (self.foreign + self.uae) if e not in (s, b1)]))
             when = date.fromisoformat(first["date"]) + timedelta(days=int(self.rng.integers(0, 20)))
-            self.add_invoice(s, b2, hs, qty=first["quantity"], unit_price=first["unit_price_usd"],
+            frac = float(self.rng.uniform(0.3, 0.7)) if c.multiple_split else 1.0
+            self.add_invoice(s, b2, hs, qty=round(first["quantity"] * frac, 1), unit_price=first["unit_price_usd"],
                              when=when, label="multiple_invoicing", doc_no=first["doc_no"],
-                             weight=first["declared_weight_kg"])
+                             weight=first["declared_weight_kg"] * frac)
         for _ in range(n):  # misdescription: electronics declared as cheap plastic or textiles
             s, b = self._pick_parties()
             true_hs = str(self.rng.choice(["851713", "847130", "901890"]))
@@ -299,10 +335,29 @@ class World:
                              weight=weight, label="misdescription")
         self._rings(c.n_rings)
         self._shells(c.n_shell_clusters)
+        for _ in range(n):  # transshipment through a FATF-listed jurisdiction plus extra hubs
+            s = str(self.rng.choice(self.uae))
+            b = str(self.rng.choice([e for e in self.foreign if self.country[e] not in HIGH_RISK]))
+            o, d = "AE", self.country[b]
+            listed = str(self.rng.choice(HIGH_RISK))
+            hubs = [h for h in HUBS if h != d]
+            mid = [listed, *[str(x) for x in self.rng.choice(hubs, int(self.rng.integers(1, 3)), replace=False)]]
+            self.rng.shuffle(mid)
+            self.add_invoice(s, b, self._hs(), route=">".join([o, *mid, d]), label="transshipment_high_risk")
+        for _ in range(n // 2):  # U-turn: out to a foreign party and back to the UAE, re-priced upwards
+            s = str(self.rng.choice(self.uae))
+            b = str(self.rng.choice([e for e in self.foreign if self.country[e] not in HIGH_RISK]))
+            back = str(self.rng.choice([e for e in self.uae if e != s]))
+            hs = self._hs()
+            first = self.add_invoice(s, b, hs, label="u_turn")
+            when = date.fromisoformat(first["date"]) + timedelta(days=int(self.rng.integers(10, 80)))
+            self.add_invoice(b, back, hs, qty=first["quantity"], when=when, label="u_turn",
+                             unit_price=first["unit_price_usd"] * self.rng.uniform(1.3, 2.5))
+        self._name_variants(c.n_name_variant_clusters)
 
     def _rings(self, k: int) -> None:
         for _ in range(k):
-            size = int(self.rng.integers(3, 5))
+            size = int(self.rng.integers(*self.cfg.ring_size))
             members = [str(self.rng.choice(self.uae))] + \
                       [str(x) for x in self.rng.choice(self.foreign, size - 1, replace=False)]
             hs = self._hs()
@@ -310,19 +365,24 @@ class World:
             price = self._price(hs)
             for _ in range(int(self.rng.integers(2, 4))):  # the loop is repeated
                 when = self._date()
+                q = qty
                 for i in range(size):
                     s, b = members[i], members[(i + 1) % size]
-                    price *= self.rng.uniform(1.0, 1.12)
-                    when = when + timedelta(days=int(self.rng.integers(3, 15)))
-                    self.add_invoice(s, b, hs, qty=qty, unit_price=price, when=when,
+                    price *= self.rng.uniform(*self.cfg.ring_price_drift)
+                    when = when + timedelta(days=int(self.rng.integers(*self.cfg.ring_hop_days)))
+                    if self.cfg.ring_qty_jitter:
+                        q = round(q * (1 + self.rng.uniform(-1, 1) * self.cfg.ring_qty_jitter), 1)
+                    self.add_invoice(s, b, hs, qty=q, unit_price=price, when=when,
                                      label="circular_trading")
 
     def _shells(self, k: int) -> None:
         for _ in range(k):
             r = self.rng.random()
-            shared = {"director": self._new_person()} if r < 0.6 else \
-                     {"phone": self._phone("AE")} if r < 0.85 else \
-                     {"address": f"Office {self.rng.integers(100, 999)}, Al Qusais Industrial Area 4, Dubai"}
+            pd_, pp, pa = self.cfg.shell_links
+            shared = {"director": self._new_person()} if r < pd_ else \
+                     {"phone": self._phone("AE")} if r < pd_ + pp else \
+                     {"address": f"Office {self.rng.integers(100, 999)}, Al Qusais Industrial Area 4, Dubai"} \
+                     if r < pd_ + pp + pa else {"bank": f"ACC-SHARED-{self.rng.integers(10000, 99999)}"}
             size = int(self.rng.integers(3, 6))
             members = []
             for j in range(size):
@@ -331,6 +391,8 @@ class World:
                 eid = self.add_entity(kind, country,
                                       director=shared.get("director"), phone=shared.get("phone"),
                                       address=shared.get("address"))
+                if "bank" in shared:
+                    self.entities[-1]["bank_account"] = shared["bank"]
                 self.country[eid] = country
                 members.append(eid)
             for _ in range(int(self.rng.integers(8, 16))):
@@ -338,6 +400,45 @@ class World:
                 hs = self._hs()
                 self.add_invoice(str(s), str(b), hs, unit_price=self._price(hs) * self.rng.uniform(1.0, 1.6),
                                  label="shell_cluster")
+
+    def _variant_name(self, w1: str, w2: str, k: int) -> str:
+        w2v = ABBREV_VARIANTS.get(w2, [w2])
+        first = w1.replace(" ", "-") if k % 3 == 2 else w1
+        second = w2 if k == 0 else w2v[k % len(w2v)]
+        suffix = ["LLC", "L.L.C", "FZE", "F.Z.E", "LLC."][k % 5]
+        return f"{first} {second} {suffix}"
+
+    @staticmethod
+    def _phone_format(digits: str, k: int) -> str:
+        cc, rest = digits[:3], digits[3:]
+        return [f"+{cc} {rest[:2]} {rest[2:5]} {rest[5:]}", f"00{cc}{rest}", f"+{cc}-{rest[:2]}-{rest[2:]}",
+                f"{cc} {rest}"][k % 4]
+
+    def _name_variants(self, k: int) -> None:
+        """One controller registers the 'same' company several times; identifiers differ only in format."""
+        for _ in range(k):
+            w1, w2 = str(self.rng.choice(_W1)), str(self.rng.choice(list(ABBREV_VARIANTS)))
+            digits = f"971{self.rng.integers(50, 59)}{self.rng.integers(1000000, 9999999)}"
+            office, area = int(self.rng.integers(100, 999)), int(self.rng.integers(1, 9))
+            addrs = [f"Office {office}, Al Qusais Industrial Area {area}, Dubai",
+                     f"Off. {office} Al-Qusais Ind. Area {area}, Dubai",
+                     f"OFFICE {office}, AL QUSAIS INDUSTRIAL AREA {area} DUBAI"]
+            size = int(self.rng.integers(3, 5))
+            members = []
+            for j in range(size):
+                share_phone = j % 2 == 0 or self.rng.random() < 0.3
+                share_addr = j % 2 == 1 or self.rng.random() < 0.3
+                eid = self.add_entity("uae_freezone" if j % 2 else "uae_mainland", "AE",
+                                      phone=self._phone_format(digits, j) if share_phone else None,
+                                      address=addrs[j % 3] if share_addr else None)
+                self.entities[-1]["name"] = self._variant_name(w1, w2, j)
+                self.country[eid] = "AE"
+                members.append(eid)
+            for _ in range(int(self.rng.integers(8, 16))):
+                s, b = self.rng.choice(members, 2, replace=False)
+                hs = self._hs()
+                self.add_invoice(str(s), str(b), hs, unit_price=self._price(hs) * self.rng.uniform(1.0, 1.6),
+                                 label="name_variant")
 
     # ------------------------------------------------------------- output
     def tables(self) -> dict[str, pd.DataFrame]:

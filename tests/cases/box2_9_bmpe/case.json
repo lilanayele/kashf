@@ -1,0 +1,11 @@
+{
+  "label": "reconstructed from public reports",
+  "source": "FATF and Egmont Group (2020), Trade-Based Money Laundering: Trends and Developments, FATF, Paris. https://www.fatf-gafi.org/en/publications/Methodsandtrends/Trade-based-money-laundering-trends-and-developments.html",
+  "box": "2.9",
+  "page": 28,
+  "country": "United States",
+  "what_happened": "Drug cash was paid to a complicit US merchant exporting consumer electronics; Colombian importers paid pesos to money brokers, so no cash crossed the border.",
+  "reconstruction": "Fairly priced, fully documented electronics exports. The laundering is in who pays, which invoice data does not show.",
+  "expect": "blind_spot",
+  "rules": []
+}

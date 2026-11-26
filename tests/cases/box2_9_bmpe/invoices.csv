@@ -1,0 +1,4 @@
+invoice_no,date,seller_id,buyer_id,hs6,description,quantity,unit,unit_price_usd,value_usd,declared_weight_kg,origin,destination,route,doc_no
+CASE-0001,2025-07-05,US401,CO401,851713,Smartphones,300,unit,182.0,54600.0,105.0,US,CO,US>CO,BL-C00001
+CASE-0002,2025-07-06,US401,CO402,851713,Smartphones,300,unit,183.0,54900.0,105.0,US,CO,US>CO,BL-C00002
+CASE-0003,2025-07-07,US401,CO401,851713,Smartphones,300,unit,184.0,55200.0,105.0,US,CO,US>CO,BL-C00003

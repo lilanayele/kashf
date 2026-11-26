@@ -15,17 +15,20 @@ Share of true alerts whose evidence names the planted mechanism.
 | misdescription | 1.000 | 5 |
 | circular_trading | 1.000 | 5 |
 | shell_cluster | 1.000 | 5 |
+| transshipment_high_risk | 1.000 | 5 |
+| u_turn | 1.000 | 5 |
+| name_variant | 0.995 | 5 |
 
-## 2. Deletion test (SYNTHETIC (kashf.generate), held-out seeds, alert threshold 0.442)
+## 2. Deletion test (SYNTHETIC (kashf.generate), held-out seeds, alert threshold 0.334)
 
 | Alerts | n | Drop strongest signal -> no alert | Drop random signal -> no alert | Strongest signal alone is an alert |
 |---|---|---|---|---|
-| all alerts | 3,517 | 88.4% | 75.9% | 99.9% |
-| multi signal alerts | 1,249 | 67.3% | 32.2% | 99.8% |
-| true alerts | 3,085 | 86.7% | 74.6% | 100.0% |
-| false alerts | 432 | 100.0% | 85.2% | 99.5% |
+| all alerts | 4,480 | 90.6% | 75.6% | 93.5% |
+| multi signal alerts | 1,928 | 78.2% | 43.3% | 85.0% |
+| true alerts | 3,899 | 89.3% | 73.8% | 97.3% |
+| false alerts | 581 | 99.8% | 87.6% | 68.5% |
 
-Single-signal alerts: 64.5% of all alerts (for these the strongest and the random signal are the same, and removing it always removes the alert).
+Single-signal alerts: 57.0% of all alerts (for these the strongest and the random signal are the same, and removing it always removes the alert).
 
 ## 3. Macro layer: SHAP vs rules (REAL (UN Comtrade), results/macro/flags.csv)
 
