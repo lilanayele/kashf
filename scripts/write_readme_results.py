@@ -78,7 +78,7 @@ From [`results/robustness.md`](results/robustness.md), tuned on seed 0 and teste
 
 | Check | F1 | False-alarm rate |
 |---|---|---|
-| Default thresholds, same generator | {sh["same_generator"]["f1"]["mean"]:.3f} | {100 * sh["same_generator"]["far"]["mean"]:.2f}% |
+| Default thresholds, same generator (seeds 1–3; the main table uses seeds 1–5) | {sh["same_generator"]["f1"]["mean"]:.3f} | {100 * sh["same_generator"]["far"]["mean"]:.2f}% |
 | Hand-set thresholds swept one at a time | {min(min(v) for v in sw.values()):.3f}–{max(max(v) for v in sw.values()):.3f} | |
 | Alert threshold {min(at, key=float)} → {max(at, key=float)} (calibration fixed) | {min(v["f1"]["mean"] for v in at.values()):.3f}–{max(v["f1"]["mean"] for v in at.values()):.3f} | |
 | **Generator shift** (more noise, subtler mispricing) | **{sh["shifted_generator"]["f1"]["mean"]:.3f}** | **{100 * sh["shifted_generator"]["far"]["mean"]:.2f}%** |

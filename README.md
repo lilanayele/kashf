@@ -86,7 +86,7 @@ From [`results/robustness.md`](results/robustness.md), tuned on seed 0 and teste
 
 | Check | F1 | False-alarm rate |
 |---|---|---|
-| Default thresholds, same generator | 0.764 | 0.66% |
+| Default thresholds, same generator (seeds 1–3; the main table uses seeds 1–5) | 0.764 | 0.66% |
 | Hand-set thresholds swept one at a time | 0.748–0.768 | |
 | Alert threshold 0.2 → 0.8 (calibration fixed) | 0.668–0.767 | |
 | **Generator shift** (more noise, subtler mispricing) | **0.647** | **2.02%** |
