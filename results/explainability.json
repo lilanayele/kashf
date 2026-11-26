@@ -1,0 +1,91 @@
+{
+  "synthetic": {
+    "label": "SYNTHETIC (kashf.generate), held-out seeds",
+    "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "invoices_per_seed": 20000,
+    "alert_threshold": 0.3337,
+    "attribution_by_typology": {
+      "over_invoicing": {
+        "mean": 1.0,
+        "seeds": 5
+      },
+      "under_invoicing": {
+        "mean": 1.0,
+        "seeds": 5
+      },
+      "phantom_shipment": {
+        "mean": 1.0,
+        "seeds": 5
+      },
+      "multiple_invoicing": {
+        "mean": 1.0,
+        "seeds": 5
+      },
+      "misdescription": {
+        "mean": 1.0,
+        "seeds": 5
+      },
+      "circular_trading": {
+        "mean": 1.0,
+        "seeds": 5
+      },
+      "shell_cluster": {
+        "mean": 1.0,
+        "seeds": 5
+      },
+      "transshipment_high_risk": {
+        "mean": 1.0,
+        "seeds": 5
+      },
+      "u_turn": {
+        "mean": 1.0,
+        "seeds": 5
+      },
+      "name_variant": {
+        "mean": 0.9946708463949843,
+        "seeds": 5
+      }
+    },
+    "deletion": {
+      "all_alerts": {
+        "alerts": 4480,
+        "drop_top_removes_alert": 0.90625,
+        "drop_random_removes_alert": 0.7560267857142857,
+        "top_signal_alone_is_alert": 0.9354910714285715
+      },
+      "multi_signal_alerts": {
+        "alerts": 1928,
+        "drop_top_removes_alert": 0.7821576763485477,
+        "drop_random_removes_alert": 0.43309128630705396,
+        "top_signal_alone_is_alert": 0.850103734439834
+      },
+      "true_alerts": {
+        "alerts": 3899,
+        "drop_top_removes_alert": 0.8925365478327776,
+        "drop_random_removes_alert": 0.7381379840984867,
+        "top_signal_alone_is_alert": 0.9728135419338292
+      },
+      "false_alerts": {
+        "alerts": 581,
+        "drop_top_removes_alert": 0.9982788296041308,
+        "drop_random_removes_alert": 0.8760757314974182,
+        "top_signal_alone_is_alert": 0.685025817555938
+      },
+      "share_single_signal": 0.5696428571428571
+    }
+  },
+  "macro": {
+    "label": "REAL (UN Comtrade), results/macro/flags.csv",
+    "pairs_flagged_by_both": 378,
+    "if_flags_reproduced": 1.0,
+    "shap_top1_in_fired_rule": 0.9708994708994709,
+    "shap_top2_contains_fired_rule": 0.9947089947089947,
+    "random_top1_expected": 0.3630952380952381
+  }
+}

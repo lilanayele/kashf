@@ -1,0 +1,13 @@
+{
+  "label": "reconstructed from public reports",
+  "source": "FATF and Egmont Group (2020), Trade-Based Money Laundering: Trends and Developments, FATF, Paris. https://www.fatf-gafi.org/en/publications/Methodsandtrends/Trade-based-money-laundering-trends-and-developments.html",
+  "box": "2.8",
+  "page": 24,
+  "country": "Australia",
+  "what_happened": "Drug proceeds were layered through Australian accounts and used to buy small portable electronics that were exported to South East Asia and the Middle East at undervalued prices.",
+  "reconstruction": "4 smartphone export invoices priced at about 0.2x the reference median.",
+  "expect": "evidence",
+  "rules": [
+    "under_priced"
+  ]
+}

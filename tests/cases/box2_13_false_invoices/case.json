@@ -1,0 +1,13 @@
+{
+  "label": "reconstructed from public reports",
+  "source": "FATF and Egmont Group (2020), Trade-Based Money Laundering: Trends and Developments, FATF, Paris. https://www.fatf-gafi.org/en/publications/Methodsandtrends/Trade-based-money-laundering-trends-and-developments.html",
+  "box": "2.13",
+  "page": 34,
+  "country": "Italy",
+  "what_happened": "Accounts of two brothers running motor-vehicle firms showed activity first suspected as a false-invoicing network; vehicle-sale proceeds went to Middle Eastern import/export companies.",
+  "reconstruction": "Export invoices for cars with no matching bill of lading (invoices without shipments). This is an interpretation of 'false invoicing'; the box gives no document details.",
+  "expect": "evidence",
+  "rules": [
+    "no_transport_doc"
+  ]
+}

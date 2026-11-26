@@ -1,0 +1,5 @@
+invoice_no,date,seller_id,buyer_id,hs6,description,quantity,unit,unit_price_usd,value_usd,declared_weight_kg,origin,destination,route,doc_no
+CASE-0001,2025-06-03,DE301,XX301,870323,Passenger cars 1.5-3.0L,10,unit,18500.0,185000.0,14500.0,DE,KZ,DE>KZ,BL-C00001
+CASE-0002,2025-06-04,DE301,XX302,870323,Passenger cars 1.5-3.0L,10,unit,18500.0,185000.0,14500.0,DE,KZ,DE>KZ,BL-C00002
+CASE-0003,2025-06-05,DE301,XX301,870323,Passenger cars 1.5-3.0L,10,unit,18500.0,185000.0,14500.0,DE,KZ,DE>KZ,BL-C00003
+CASE-0004,2025-06-06,DE301,XX302,870323,Passenger cars 1.5-3.0L,10,unit,18500.0,185000.0,14500.0,DE,KZ,DE>KZ,BL-C00004

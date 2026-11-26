@@ -1,0 +1,13 @@
+{
+  "label": "reconstructed from public reports",
+  "source": "FATF and Egmont Group (2020), Trade-Based Money Laundering: Trends and Developments, FATF, Paris. https://www.fatf-gafi.org/en/publications/Methodsandtrends/Trade-based-money-laundering-trends-and-developments.html",
+  "box": "2.6",
+  "page": 22,
+  "country": "Spain, Italy (Europol)",
+  "what_happened": "Criminal cash bought luxury vehicles in Germany; companies created fake paper trails for sales and VAT chains.",
+  "reconstruction": "The same 6 cars invoiced around a chain of 4 companies that returns to the first, twice.",
+  "expect": "evidence",
+  "rules": [
+    "circular_trade"
+  ]
+}

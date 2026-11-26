@@ -6,6 +6,7 @@ Label: **real (UN Comtrade)**. Annual HS data at total level (partner2 = World, 
 - Years: 2020, 2021, 2022, 2023; partners: 156; HS6 codes: 43
 - Median |log mirror gap|: 1.18 (sides typically differ by 3.25x after the CIF/FOB adjustment)
 - Median mirror gap by direction: uae_export -1.41 (importer reports 0.24x the CIF-adjusted exporter value), uae_import +0.01 (importer reports 1.01x the CIF-adjusted exporter value)
+- UAE exports, re-exports reported explicitly: re-exports (RX) are 34% of the UAE-reported export value in these pairs. Median gap against X + RX -1.41 (partner reports 0.24x); against domestic exports X only -0.89 (0.41x; 5,581 pairs with X > 0)
 - Flag rate on real data: rules (relative baseline) 9.3%, Isolation Forest 5.0%; agreement 93.4%
 
 **Fixed thresholds failed on real data.** The absolute thresholds set before seeing real data (|gap| > ln 1.5) flag 84% of real pairs, because UAE-export gaps are systematically negative: partners record most UAE re-exports under the country of origin. After seeing this, the rules compare each pair with the median of the same HS6 and direction (robust z). This change was made after looking at the real data and is disclosed here.
@@ -16,19 +17,40 @@ Label: **real (UN Comtrade)**. Annual HS data at total level (partner2 = World, 
 
 | Method | Distortion | Recall | Recall on unflagged | Precision (lower bound) | Flag rate | PR-AUC | PR-AUC (random) |
 |---|---|---|---|---|---|---|---|
+| gfi_gap_topk | +/-10% | 0.09 | 0.09 | 0.05 | 9.3% | 0.05 | 0.05 |
 | iforest | +/-10% | 0.05 | 0.01 | 0.05 | 5.0% | 0.05 | 0.05 |
+| iqr_filter | +/-10% | 0.55 | 0.53 | 0.05 | 54.4% | 0.05 | 0.05 |
+| iqr_filter_topk | +/-10% | 0.11 | 0.07 | 0.06 | 9.3% | 0.05 | 0.05 |
 | rules | +/-10% | 0.10 | 0.00 | 0.05 | 9.3% | 0.05 | 0.05 |
+| gfi_gap_topk | +/-25% | 0.10 | 0.10 | 0.05 | 9.3% | 0.05 | 0.05 |
 | iforest | +/-25% | 0.06 | 0.01 | 0.06 | 5.0% | 0.05 | 0.05 |
+| iqr_filter | +/-25% | 0.57 | 0.55 | 0.05 | 54.4% | 0.05 | 0.05 |
+| iqr_filter_topk | +/-25% | 0.11 | 0.07 | 0.06 | 9.3% | 0.05 | 0.05 |
 | rules | +/-25% | 0.10 | 0.01 | 0.05 | 9.3% | 0.05 | 0.05 |
+| gfi_gap_topk | +/-50% | 0.10 | 0.10 | 0.05 | 9.3% | 0.05 | 0.05 |
 | iforest | +/-50% | 0.06 | 0.02 | 0.06 | 5.0% | 0.06 | 0.05 |
+| iqr_filter | +/-50% | 0.59 | 0.58 | 0.05 | 54.6% | 0.06 | 0.05 |
+| iqr_filter_topk | +/-50% | 0.12 | 0.08 | 0.06 | 9.3% | 0.06 | 0.05 |
 | rules | +/-50% | 0.10 | 0.01 | 0.06 | 9.3% | 0.06 | 0.05 |
+| gfi_gap_topk | +/-100% | 0.10 | 0.10 | 0.05 | 9.3% | 0.05 | 0.05 |
 | iforest | +/-100% | 0.07 | 0.03 | 0.07 | 5.0% | 0.06 | 0.05 |
+| iqr_filter | +/-100% | 0.62 | 0.61 | 0.06 | 54.7% | 0.07 | 0.05 |
+| iqr_filter_topk | +/-100% | 0.17 | 0.14 | 0.09 | 9.3% | 0.07 | 0.05 |
 | rules | +/-100% | 0.13 | 0.05 | 0.07 | 9.4% | 0.06 | 0.05 |
+| gfi_gap_topk | x/÷3 | 0.10 | 0.10 | 0.06 | 9.3% | 0.05 | 0.05 |
 | iforest | x/÷3 | 0.10 | 0.05 | 0.09 | 5.0% | 0.08 | 0.05 |
+| iqr_filter | x/÷3 | 0.67 | 0.65 | 0.06 | 54.9% | 0.09 | 0.05 |
+| iqr_filter_topk | x/÷3 | 0.23 | 0.20 | 0.12 | 9.3% | 0.09 | 0.05 |
 | rules | x/÷3 | 0.20 | 0.13 | 0.11 | 9.6% | 0.08 | 0.05 |
+| gfi_gap_topk | x/÷5 | 0.11 | 0.11 | 0.06 | 9.3% | 0.06 | 0.05 |
 | iforest | x/÷5 | 0.14 | 0.10 | 0.14 | 5.0% | 0.10 | 0.05 |
+| iqr_filter | x/÷5 | 0.70 | 0.69 | 0.06 | 55.1% | 0.13 | 0.05 |
+| iqr_filter_topk | x/÷5 | 0.31 | 0.29 | 0.16 | 9.3% | 0.13 | 0.05 |
 | rules | x/÷5 | 0.29 | 0.22 | 0.14 | 9.9% | 0.12 | 0.05 |
+| gfi_gap_topk | x/÷10 | 0.12 | 0.12 | 0.07 | 9.3% | 0.07 | 0.05 |
 | iforest | x/÷10 | 0.21 | 0.18 | 0.21 | 5.0% | 0.15 | 0.05 |
+| iqr_filter | x/÷10 | 0.74 | 0.74 | 0.07 | 55.3% | 0.21 | 0.05 |
+| iqr_filter_topk | x/÷10 | 0.41 | 0.39 | 0.22 | 9.3% | 0.21 | 0.05 |
 | rules | x/÷10 | 0.45 | 0.41 | 0.21 | 10.6% | 0.20 | 0.05 |
 
 ## Case study: top 10 flagged UAE flows on the real data

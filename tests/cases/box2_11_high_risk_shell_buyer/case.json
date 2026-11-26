@@ -1,0 +1,13 @@
+{
+  "label": "reconstructed from public reports",
+  "source": "FATF and Egmont Group (2020), Trade-Based Money Laundering: Trends and Developments, FATF, Paris. https://www.fatf-gafi.org/en/publications/Methodsandtrends/Trade-based-money-laundering-trends-and-developments.html",
+  "box": "2.11",
+  "page": 32,
+  "country": "New Zealand",
+  "what_happened": "Fruit exporters received payments from accounts of shell companies in high-risk jurisdictions against fraudulent invoices.",
+  "reconstruction": "Fairly priced fruit (HS 080410) sold to a shell in a FATF-listed jurisdiction (VG). The third-party payments and fake invoice wording are not in invoice data.",
+  "expect": "evidence",
+  "rules": [
+    "high_risk_party"
+  ]
+}

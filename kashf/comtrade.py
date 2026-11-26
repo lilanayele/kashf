@@ -354,7 +354,8 @@ def global_distribution(flows: pd.DataFrame, min_reporters: int = 5) -> pd.DataF
     w["luv"] = np.log(w["uv"])
     g = w.groupby(["hs6", "year"])["luv"].agg(
         n_reporters="count", log_median="median",
-        log_mad=lambda x: float(np.median(np.abs(x - np.median(x))))).reset_index()
+        log_mad=lambda x: float(np.median(np.abs(x - np.median(x)))),
+        log_q1=lambda x: float(np.quantile(x, 0.25)), log_q3=lambda x: float(np.quantile(x, 0.75))).reset_index()
     g["basis"] = g["hs6"].map(basis)
     g["enough"] = g["n_reporters"] >= min_reporters
     return g
@@ -436,6 +437,13 @@ CAVEATS = """## Caveats (read before interpreting any mirror gap)
 - **Classification.** Partners may classify the same goods under different HS6 codes, or use a different
   HS edition; Comtrade converts between editions, which can add noise.
 - **Reporting coverage.** The UAE and some partners report with a lag; the latest year may be incomplete.
+- **Redistribution (UN Comtrade licence).** `results/macro/flags.csv` (about 9,700 pairs) is committed for the
+  live demo. It is mostly derived indicators (mirror gaps, robust z-scores, flags) plus each pair's two reported
+  values and weights. UN Comtrade's guidance treats "meaningfully enhanced" data as transformed, exempts free
+  visualization and analytics applications, and requires a distribution licence only from 100,000 original records
+  (https://comtradewiki.azurewebsites.net/?p=893; licence: https://comtrade.un.org/licenseagreement.html). Raw
+  pulls (data/raw/) and the full per-pair file are not committed. Source credit: "UN Comtrade". This is a reading
+  of public guidance, not legal advice; questions go to comtrade@un.org.
 - **What a flag means.** A flagged pair is a country x product x year aggregate that merits a closer look.
   It is not evidence that any company or person laundered money.
 """

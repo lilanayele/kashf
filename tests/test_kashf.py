@@ -169,7 +169,7 @@ def test_api(tmp_path, world):
 
 def test_settings_come_from_yaml():
     s = Settings.from_yaml()
-    assert s.alert_threshold == 0.44 and s.high_risk == ("XA", "XB", "XC")
+    assert 0 < s.alert_threshold < 1 and {"IR", "KP"} <= set(s.high_risk)
     assert Settings.from_yaml(price_z=3.0).price_z == 3.0
     with pytest.raises(TypeError):
         Settings(nope=1)
@@ -199,3 +199,29 @@ def test_health_and_csv_only_upload():
     assert c.get("/health").json() == {"status": "ok"}
     r = c.post("/api/upload", files=[("files", ("invoices.xlsx", b"x", "application/octet-stream"))])
     assert r.status_code == 415
+
+
+def test_fatf_lists_load_with_date_and_sources():
+    from kashf.config import fatf_lists, fatf_high_risk
+    d = fatf_lists()
+    import datetime as dt
+    dt.date.fromisoformat(d["as_of"])
+    assert d["sources"]["call_for_action"].startswith("https://www.fatf-gafi.org/")
+    hr = fatf_high_risk()
+    assert {"IR", "KP"} <= set(hr) and all(len(c) == 2 and c.isupper() for c in hr)
+    s = Settings.from_yaml()
+    assert set(s.high_risk) == set(hr) and d["as_of"] in s.high_risk_note
+
+
+def test_shipped_calibration_matches_results():
+    """The dashboard's calibration and alert threshold must be the ones the reported results used."""
+    import json
+    from pathlib import Path
+
+    from kashf.config import Settings
+
+    root = Path(__file__).resolve().parent.parent
+    assert json.loads((root / "kashf/models/calibration.json").read_text()) == \
+        json.loads((root / "results/calibration.json").read_text())
+    thr = json.loads((root / "results/summary.json").read_text())["thresholds"]["kashf_full"]
+    assert abs(Settings.from_yaml().alert_threshold - thr) < 0.01

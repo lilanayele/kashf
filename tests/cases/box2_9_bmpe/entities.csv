@@ -1,0 +1,4 @@
+entity_id,name,kind,country,address,phone,director_id,bank_account
+US401,Miami Electronics Inc,foreign,US,"US401 Street 1, City-US",+99 55 1015 0000,P-US401,ACC-US401
+CO401,Andes Distribuciones SAS,foreign,CO,"CO401 Street 1, City-CO",+99 55 1016 0000,P-CO401,ACC-CO401
+CO402,Pacifico Importadora SAS,foreign,CO,"CO402 Street 1, City-CO",+99 55 1017 0000,P-CO402,ACC-CO402

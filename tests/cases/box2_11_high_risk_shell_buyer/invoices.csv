@@ -1,0 +1,4 @@
+invoice_no,date,seller_id,buyer_id,hs6,description,quantity,unit,unit_price_usd,value_usd,declared_weight_kg,origin,destination,route,doc_no
+CASE-0001,2025-04-02,NZ201,VG201,080410,Dates,2000,kg,2.1,4200.0,2040.0,NZ,VG,NZ>VG,BL-C00001
+CASE-0002,2025-05-02,NZ201,VG201,080410,Dates,2000,kg,2.1,4200.0,2040.0,NZ,VG,NZ>VG,BL-C00002
+CASE-0003,2025-06-02,NZ201,VG201,080410,Dates,2000,kg,2.1,4200.0,2040.0,NZ,VG,NZ>VG,BL-C00003

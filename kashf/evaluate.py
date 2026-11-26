@@ -5,8 +5,12 @@
 * Configurations
       kashf_full                 all four detectors
       minus_<detector>           ablations, one detector removed
+      exact_entities             full Kashf, but the graph links only identifiers that match exactly
+                                 (entity resolution off) - the "before" for fuzzy matching
       price_only                 price benchmark alone (the classic TBML method)
       checklist                  a manual-review checklist encoded as rules (no tuning, binary)
+      iqr_price_filter           published inter-quartile price filter (de Boyrie, Pak & Zdanowicz 2004/05):
+                                 price outside [Q1, Q3] of the reference = alert (no tuning; kashf.baselines)
       isolation_forest           unsupervised ML on per-invoice features (threshold tuned on seed 0)
 * Metrics: precision, recall, F1, false-alarm rate (FAR), alerts per 1,000 invoices,
   average precision (threshold-free), recall per typology, and evidence attribution
@@ -34,13 +38,15 @@ from kashf import calibrate, reference
 from kashf.config import Settings
 from kashf.detectors import run_all
 from kashf.generate import Config, generate
+from kashf.baselines import iqr_price_scores
 from kashf.scoring import score_invoices
 
 log = logging.getLogger("kashf.evaluate")
 
 DETECTORS = ("price", "route", "documents", "graph")
 TYPOLOGIES = ("over_invoicing", "under_invoicing", "phantom_shipment", "multiple_invoicing",
-              "misdescription", "circular_trading", "shell_cluster")
+              "misdescription", "circular_trading", "shell_cluster", "transshipment_high_risk", "u_turn",
+              "name_variant")
 # rules whose evidence correctly describes each planted mechanism
 EXPECTED = {
     "over_invoicing": {"over_priced"}, "under_invoicing": {"under_priced"},
@@ -48,6 +54,8 @@ EXPECTED = {
     "multiple_invoicing": {"doc_reused"},
     "misdescription": {"over_priced", "under_priced", "implausible_unit_weight"},
     "circular_trading": {"circular_trade"}, "shell_cluster": {"linked_parties", "linked_cluster"},
+    "transshipment_high_risk": {"high_risk_transit", "excess_legs"}, "u_turn": {"u_turn"},
+    "name_variant": {"linked_parties", "linked_cluster"},
 }
 
 
@@ -147,8 +155,13 @@ def run(n_seeds: int = 5, n: int = 20000, out: str | Path = "results",
     s = Settings.from_yaml()
     ref = reference.load(reference_path) if reference_path else reference.default_table()
     gen_ref = ref if reference_path else None
-    configs = ["kashf_full", "kashf_heuristic", *[f"minus_{d}" for d in DETECTORS],
-               "price_only", "checklist", "isolation_forest"]
+    configs = ["kashf_full", "kashf_heuristic", *[f"minus_{d}" for d in DETECTORS], "exact_entities",
+               "price_only", "checklist", "iqr_price_filter", "isolation_forest"]
+    s_exact = replace(s, entity_resolution="exact")
+
+    def with_exact_graph(t, sig):
+        g = run_all(t, ref, s_exact, only={"graph"})
+        return pd.concat([sig[sig["detector"] != "graph"], g], ignore_index=True)
 
     # ---- tune on seed 0: per-rule calibration, then each configuration's threshold
     t0 = generate(Config(seed=0, n_invoices=n, reference=gen_ref))
@@ -162,14 +175,16 @@ def run(n_seeds: int = 5, n: int = 20000, out: str | Path = "results",
               "kashf_heuristic": kashf_scores(t, sig, s, DETECTORS),
               "price_only": kashf_scores(t, sig, sc_cal, ("price",)),
               "checklist": checklist_scores(t, ref, s),
+              "iqr_price_filter": iqr_price_scores(t["invoices"], ref),
               "isolation_forest": iforest_scores(t, ref, s, seed)}
         for d in DETECTORS:
             sc[f"minus_{d}"] = kashf_scores(t, sig, sc_cal, tuple(x for x in DETECTORS if x != d))
+        sc["exact_entities"] = kashf_scores(t, with_exact_graph(t, sig), sc_cal, DETECTORS)
         return sc
 
     y0 = (t0["labels"].set_index("invoice_no")["typology"] != "none").astype(int)
     sc0 = scores_for(t0, sig0, 0)
-    thr = {c: (0.5 if c == "checklist" else best_threshold(y0.values, sc0[c].reindex(y0.index).fillna(0).values))
+    thr = {c: (0.5 if c == "checklist" else 1e-9 if c == "iqr_price_filter" else best_threshold(y0.values, sc0[c].reindex(y0.index).fillna(0).values))
            for c in configs}
 
     # ---- test on held-out seeds
@@ -183,6 +198,8 @@ def run(n_seeds: int = 5, n: int = 20000, out: str | Path = "results",
         sc = scores_for(t, sig, seed)
         for c in configs:
             per_seed[c].append(metrics(y, sc[c], thr[c], lab, sig if c.startswith(("kashf", "minus")) else None))
+        per_seed.setdefault("_route_signals", []).append(
+            {k: int(v) for k, v in sig[sig["detector"] == "route"].groupby("rule")["invoice_no"].nunique().items()})
         per_seed.setdefault("_counts", []).append({"invoices": len(y), "laundering": int(y.sum()),
                                                    **{k: int((lab == k).sum()) for k in TYPOLOGIES}})
         curves.append(mispricing_curve(t, ref, sc["kashf_full"], thr["kashf_full"], lab).assign(seed=seed))
@@ -205,7 +222,7 @@ def run(n_seeds: int = 5, n: int = 20000, out: str | Path = "results",
 
     summary = {"protocol": {"tuning_seed": 0, "test_seeds": list(range(1, n_seeds + 1)), "invoices_per_seed": n,
                             "reference": str(reference_path) if reference_path else "illustrative (kashf/reference.py)"},
-               "counts": per_seed["_counts"], "calibration": table,
+               "counts": per_seed["_counts"], "route_signals": per_seed["_route_signals"], "calibration": table,
                "thresholds": thr, "configs": {c: agg(per_seed[c]) for c in configs}}
     curve = pd.concat(curves).groupby("bin", observed=False).agg(n=("n", "sum"), recall=("recall", "mean")).reset_index()
     summary["mispricing_recall"] = curve.to_dict("records")
@@ -233,7 +250,9 @@ def _tune_and_test(s: Settings, ref: pd.DataFrame, tune_cfg: Config, test_cfgs: 
         y = (lab != "none").astype(int)
         m = metrics(y, kashf_scores(t, sig, sc, DETECTORS), thr, lab, None)
         rows.append({k: m[k] for k in ("precision", "recall", "f1", "far", "avg_precision")})
-    agg = {k: _ms([r[k] for r in rows]) for k in rows[0]}
+        rows[-1]["_typ"] = m["recall_by_typology"]
+    agg = {k: _ms([r[k] for r in rows]) for k in rows[0] if k != "_typ"}
+    agg["recall_by_typology"] = {k: float(np.mean([r["_typ"].get(k, np.nan) for r in rows])) for k in TYPOLOGIES}
     agg["threshold"] = thr
     return agg
 
@@ -242,6 +261,15 @@ SWEEP = {"price_z": [1.5, 2.0, 2.5, 3.0], "qty_tolerance": [0.01, 0.03, 0.05, 0.
          "weight_tolerance": [0.10, 0.15, 0.25, 0.40]}
 SHIFT = {"price_noise_scale": 1.3, "premium_rate": 0.06, "clearance_rate": 0.04, "premium_range": (1.4, 3.5),
          "over_range": (1.3, 4.0), "under_range": (0.25, 0.75), "typology_rate": 0.004}
+
+
+# A second set of typology mechanics, chosen from the FATF/Egmont descriptions WITHOUT running the
+# detectors first: longer rings with slower hops and drifting quantities, shells linked only through a
+# shared bank account in some cases, subtler phantom weights, split multiple invoicing, subtler mispricing.
+# Written by the same author as the detectors, so it is a stress test, not an independent dataset.
+ALT_TYPOLOGIES = {"ring_size": (4, 8), "ring_hop_days": (10, 45), "ring_price_drift": (0.95, 1.25),
+                  "ring_qty_jitter": 0.08, "shell_links": (0.35, 0.25, 0.15), "phantom_weight_range": (0.4, 0.75),
+                  "multiple_split": True, "over_range": (1.4, 3.0), "under_range": (0.35, 0.7)}
 
 
 def robustness(n_seeds: int = 3, n: int = 20000, out: str | Path = "results",
@@ -285,6 +313,10 @@ def robustness(n_seeds: int = 3, n: int = 20000, out: str | Path = "results",
     shifted = [replace(c, seed=100 + c.seed, **SHIFT) for c in tests]
     res["shift"]["shifted_generator"] = _tune_and_test(base, ref, tune, shifted)
     res["shift"]["shift_params"] = {k: list(v) if isinstance(v, tuple) else v for k, v in SHIFT.items()}
+    log.info("alternative typology mechanics test")
+    alt = [replace(c, seed=200 + c.seed, **ALT_TYPOLOGIES) for c in tests]
+    res["shift"]["alt_typologies"] = _tune_and_test(base, ref, tune, alt)
+    res["shift"]["alt_typology_params"] = {k: list(v) if isinstance(v, tuple) else v for k, v in ALT_TYPOLOGIES.items()}
     res["protocol"] = {"tuning_seed": 0, "test_seeds": [c.seed for c in tests], "invoices_per_seed": n,
                        "reference": str(reference_path) if reference_path else "illustrative (kashf/reference.py)"}
     (out / "robustness.json").write_text(json.dumps(res, indent=2, default=float))
@@ -312,8 +344,9 @@ def _write_robustness_md(r: dict, path: Path) -> None:
     L += ["", "## 3. Generator shift", "",
           "Tuned on the default generator; tested on seeds from the same generator vs a shifted one "
           f"({', '.join(f'{k}={v}' for k, v in s['shift_params'].items())}).", "",
+          f"Alternative typology mechanics: {', '.join(f'{k}={v}' for k, v in s['alt_typology_params'].items())}.", "",
           "| Test data | Precision | Recall | F1 | False-alarm rate | Avg. precision |", "|---|---|---|---|---|---|"]
-    for k in ("same_generator", "shifted_generator"):
+    for k in ("same_generator", "shifted_generator", "alt_typologies"):
         m = s[k]
         L.append(f"| {k.replace('_', ' ')} | {_f(m['precision'])} | {_f(m['recall'])} | {_f(m['f1'])} | "
                  f"{_f(m['far'], 2, pct=True)} | {_f(m['avg_precision'])} |")

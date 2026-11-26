@@ -1,0 +1,5 @@
+entity_id,name,kind,country,address,phone,director_id,bank_account
+IT001,Auto Lusso Srl,foreign,IT,"IT001 Street 1, City-IT",+99 55 1003 0000,P-IT001,ACC-IT001
+DE001,Rhein Motors GmbH,foreign,DE,"DE001 Street 1, City-DE",+99 55 1004 0000,P-DE001,ACC-DE001
+ES001,Costa Vehiculos SL,foreign,ES,"ES001 Street 1, City-ES",+99 55 1005 0000,P-ES001,ACC-ES001
+IT002,Nord Import Srl,foreign,IT,"IT002 Street 1, City-IT",+99 55 1006 0000,P-IT002,ACC-IT002

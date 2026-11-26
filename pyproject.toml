@@ -11,7 +11,7 @@ requires-python = ">=3.9"
 license = {text = "MIT"}
 authors = [{name = "Lilan Getachew"}]
 # Ranges here; exact tested pins (Python 3.9+) in requirements.txt, generated from requirements.in.
-dependencies = ["pandas>=2.0", "numpy>=1.26", "networkx>=3.2", "scikit-learn>=1.4", "matplotlib>=3.8",
+dependencies = ["pandas>=2.0", "numpy>=1.26", "networkx>=3.2", "rapidfuzz>=3.9", "scikit-learn>=1.4", "matplotlib>=3.8",
                 "fastapi>=0.110", "uvicorn>=0.29", "python-multipart>=0.0.9", "pyyaml>=6.0",
                 "pyarrow>=14", "python-dotenv>=1.0", "comtradeapicall==1.4.0"]
 

@@ -64,16 +64,17 @@ def price_detector(inv: pd.DataFrame, ref: pd.DataFrame, s: Settings) -> list[Si
 def route_detector(inv: pd.DataFrame, s: Settings) -> list[Signal]:
     out: list[Signal] = []
     hr = set(s.high_risk)
+    note = f" ({s.high_risk_note})" if s.high_risk_note else ""
     for row in inv.itertuples(index=False):
         legs = str(row.route).split(">")
         ends = {legs[0], legs[-1]} & hr
         transit = set(legs[1:-1]) & hr
         if ends:
             out.append(Signal(row.invoice_no, "route", "high_risk_party", 0.45,
-                              f"Counterparty located in high-risk jurisdiction {', '.join(sorted(ends))}."))
+                              f"Counterparty located in high-risk jurisdiction {', '.join(sorted(ends))}{note}."))
         if transit:
             out.append(Signal(row.invoice_no, "route", "high_risk_transit", 0.35,
-                              f"Goods transit high-risk jurisdiction {', '.join(sorted(transit))} (route {row.route})."))
+                              f"Goods transit high-risk jurisdiction {', '.join(sorted(transit))}{note} (route {row.route})."))
         mids = legs[1:-1]
         seen = [c for i, c in enumerate(mids) if c in mids[:i] or c in (legs[0], legs[-1])]
         if seen:
@@ -82,6 +83,33 @@ def route_detector(inv: pd.DataFrame, s: Settings) -> list[Signal]:
         if len(legs) - 1 >= s.max_legs:
             out.append(Signal(row.invoice_no, "route", "excess_legs", 0.3,
                               f"{len(legs) - 1} legs for an {row.origin}→{row.destination} shipment ({row.route})."))
+    out.extend(_u_turns(inv, s))
+    return out
+
+
+def _u_turns(inv: pd.DataFrame, s: Settings) -> list[Signal]:
+    """U-turn trade: goods exported from the UAE to a foreign party come back to the UAE from the
+    same party (same HS code, similar quantity) within u_turn_days (FATF/Egmont 2021 indicator:
+    goods shipped through or to a jurisdiction and returned without economic reason)."""
+    cols = ["invoice_no", "date", "seller_id", "buyer_id", "hs6", "quantity", "unit_price_usd", "origin", "destination"]
+    x = inv.loc[(inv["origin"] == "AE") & (inv["destination"] != "AE"), cols]
+    m = inv.loc[(inv["destination"] == "AE") & (inv["origin"] != "AE"), cols]
+    if x.empty or m.empty:
+        return []
+    j = x.merge(m, left_on=["buyer_id", "hs6"], right_on=["seller_id", "hs6"], suffixes=("_x", "_m"))
+    if j.empty:
+        return []
+    dt = (pd.to_datetime(j["date_m"]) - pd.to_datetime(j["date_x"])).dt.days
+    close = (j["quantity_m"] - j["quantity_x"]).abs() <= s.cycle_qty_tolerance * j["quantity_x"]
+    j = j[(dt > 0) & (dt <= s.u_turn_days) & close].assign(days=dt)
+    out = []
+    for r in j.itertuples(index=False):
+        ratio = r.unit_price_usd_m / r.unit_price_usd_x if r.unit_price_usd_x else float("nan")
+        ev = (f"HS {r.hs6} exported from the UAE by {r.seller_id_x} to {r.buyer_id_x} ({r.destination_x}) "
+              f"came back to the UAE from the same party {r.days} days later (similar quantity, "
+              f"re-import price {ratio:.2f}× the export price).")
+        out.append(Signal(r.invoice_no_x, "route", "u_turn", 0.6, ev))
+        out.append(Signal(r.invoice_no_m, "route", "u_turn", 0.6, ev))
     return out
 
 
@@ -145,24 +173,20 @@ def document_detector(inv: pd.DataFrame, docs: pd.DataFrame, packing: pd.DataFra
 
 # =========================================================== 4. counterparty graph
 def link_graph(ent: pd.DataFrame, s: Settings) -> tuple[nx.Graph, dict]:
-    """Entities linked by shared director, phone, address or bank account.
+    """Entities linked by shared director, phone, address or bank account (and, with
+    entity_resolution = "fuzzy", by the same phone/address in a different format or a
+    near-identical name at a similar address; see kashf.entities).
     Identifiers shared by >= hub_identifier_size entities (free-zone business centres,
     registered-agent phone lines) are treated as hubs and ignored."""
+    from kashf.entities import links
+
     g = nx.Graph()
     g.add_nodes_from(ent["entity_id"])
-    hubs: dict[str, int] = {}
-    for col, label in (("director_id", "director"), ("phone", "phone"), ("address", "address"),
-                       ("bank_account", "bank account")):
-        for val, grp in ent.groupby(col)["entity_id"]:
-            ids = list(grp)
-            if len(ids) < 2:
-                continue
-            if len(ids) >= s.hub_identifier_size:
-                hubs[f"{label}: {val}"] = len(ids)
-                continue
-            for i in range(len(ids)):
-                for j in range(i + 1, len(ids)):
-                    g.add_edge(ids[i], ids[j], via=f"{label} {val}")
+    pairs, hubs = links(ent, s.entity_resolution, s.name_similarity, s.address_similarity,
+                        s.hub_identifier_size)
+    for a, b, via in pairs:
+        if not g.has_edge(a, b):
+            g.add_edge(a, b, via=via)
     return g, hubs
 
 
@@ -195,7 +219,8 @@ def _cycles(inv: pd.DataFrame, s: Settings) -> list[Signal]:
     out: list[Signal] = []
     flagged: dict[str, str] = {}
     df = inv[["invoice_no", "date", "seller_id", "buyer_id", "hs6", "quantity"]].copy()
-    df["t"] = (pd.to_datetime(df["date"]) - pd.Timestamp("1970-01-01")).dt.days
+    # fractional days: invoice dates behave as before; timestamps (transfer data) keep their order within a day
+    df["t"] = (pd.to_datetime(df["date"]) - pd.Timestamp("1970-01-01")).dt.total_seconds() / 86400.0
     for hs, grp in df.groupby("hs6"):
         rows = grp.to_dict("records")
         by_seller = defaultdict(list)
@@ -227,7 +252,7 @@ def _cycles(inv: pd.DataFrame, s: Settings) -> list[Signal]:
                     if c["buyer_id"] == start["seller_id"] and len(path) + 1 >= 3:
                         loop = path + [c]
                         names = " → ".join([x["seller_id"] for x in loop] + [start["seller_id"]])
-                        span = loop[-1]["t"] - loop[0]["t"]
+                        span = int(round(loop[-1]["t"] - loop[0]["t"]))
                         for x in loop:
                             flagged.setdefault(x["invoice_no"], f"Same goods (HS {hs}, quantity "
                                                f"~{start['quantity']:,.0f}) moved around the loop {names} "

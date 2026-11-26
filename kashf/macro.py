@@ -119,10 +119,16 @@ def build_pairs(flows: pd.DataFrame, cif_fob: float = 0.10) -> pd.DataFrame:
                                  pairs["rx_value_exp"] / pairs["value_exp"], np.nan)
     pairs = pairs.drop(columns=["rx_value_imp"]).rename(columns={"rx_value_exp": "rx_value"})
     pairs["mirror_gap"] = np.log(pairs["value_imp"] / ((1 + cif_fob) * pairs["value_exp"]))
+    # UAE re-exports reported explicitly: the same gap against UAE domestic exports (X) only.
+    # If partners book re-exports under the country of origin, the X-only gap is the fairer comparison.
+    x_only = (pairs["value_exp"] - pairs["rx_value"]).where(pairs["direction"] == "uae_export")
+    pairs["value_exp_x_only"] = x_only
+    with np.errstate(divide="ignore", invalid="ignore"):
+        pairs["mirror_gap_x_only"] = np.log(pairs["value_imp"] / ((1 + cif_fob) * x_only.where(x_only > 0)))
     pairs["weight_gap"] = np.log(pairs["wgt_imp"] / pairs["wgt_exp"])
     return pairs[["direction", "partner", "partner_iso", "hs6", "year", "value_exp", "value_imp", "wgt_exp",
                   "wgt_imp", "qty_exp", "qty_imp", "rx_value", "rx_share", "wgt_est_exp", "wgt_est_imp",
-                  "mirror_gap", "weight_gap"]]
+                  "mirror_gap", "value_exp_x_only", "mirror_gap_x_only", "weight_gap"]]
 
 
 def add_unit_value_z(pairs: pd.DataFrame, dist: pd.DataFrame, cif_fob: float = 0.10) -> pd.DataFrame:
@@ -142,6 +148,9 @@ def add_unit_value_z(pairs: pd.DataFrame, dist: pd.DataFrame, cif_fob: float = 0
         p[f"uv_{side}"] = uv
         p[f"uv_z_{side}"] = np.where(ok & np.isfinite(z), z, np.nan)
     p["uv_basis"] = basis
+    if "log_q1" in d:                                    # for the IQR price-filter baseline (kashf.baselines)
+        p["uv_log_q1"] = np.where(ok, d["log_q1"].reindex(idx).values, np.nan)
+        p["uv_log_q3"] = np.where(ok, d["log_q3"].reindex(idx).values, np.nan)
     p["uv_median"] = np.exp(med)
     p["uv_log_mad"] = mad
     return p
@@ -338,7 +347,7 @@ def inject(p: pd.DataFrame, size: float, share: float, rng: np.random.Generator,
     return q, y
 
 
-def evaluate_injection(p: pd.DataFrame, cfg: dict, seed: int = 0) -> pd.DataFrame:
+def evaluate_injection(p: pd.DataFrame, cfg: dict, seed: int = 0, with_baselines: bool = True) -> pd.DataFrame:
     """Recall, precision and PR-AUC vs injection size for rules and Isolation Forest.
 
     Precision here is a LOWER BOUND: real flows that are flagged but not injected count as
@@ -354,8 +363,17 @@ def evaluate_injection(p: pd.DataFrame, cfg: dict, seed: int = 0) -> pd.DataFram
             q, y = inject(p, float(size), float(cfg["injection_share"]), rng, c)
             r = rules(q, cfg)
             f, _, _ = iforest(q, cfg, seed=rep)
-            for name, flag, score in (("rules", r["rule_flag"].values, r["rule_score"].values),
-                                      ("iforest", f["if_flag"].values, f["if_score"].values)):
+            methods = [("rules", r["rule_flag"].values, r["rule_score"].values),
+                       ("iforest", f["if_flag"].values, f["if_score"].values)]
+            if with_baselines:
+                from kashf import baselines
+                k = int(round(float(base["rule_flag"].mean()) * len(q)))   # same flag rate as the rules
+                g = baselines.gfi_gap(q, c)
+                methods.append(("gfi_gap_topk", baselines.top_k(g, k), g))
+                if "uv_log_q1" in q:
+                    iq = baselines.iqr_filter(q)
+                    methods += [("iqr_filter", iq > 0, iq), ("iqr_filter_topk", baselines.top_k(iq, k), iq)]
+            for name, flag, score in methods:
                 tp = int((flag & y).sum())
                 fresh = y & ~pre_flag      # injected rows that rules did not already flag before injection
                 rows.append({"size": size, "repeat": rep, "method": name, "n_pairs": len(q),
@@ -434,9 +452,25 @@ def run(out: Path, cfg_all: Optional[dict] = None, seed: int = 0) -> dict:
              "agree": float((r["rule_flag"] == f["if_flag"]).mean()),
              "median_abs_gap": float(elig["mirror_gap"].abs().median()),
              "absolute_flag_rate": float(r_abs["rule_flag"].mean()),
+             "uae_export_median_gap_x_plus_rx": float(elig.loc[elig["direction"] == "uae_export", "mirror_gap"].median()),
+             "uae_export_median_gap_x_only": float(elig.loc[elig["direction"] == "uae_export", "mirror_gap_x_only"].median()),
+             "uae_export_pairs_with_x": int(elig.loc[elig["direction"] == "uae_export", "mirror_gap_x_only"].notna().sum()),
+             "uae_export_rx_share_of_value": float(elig.loc[elig["direction"] == "uae_export", "rx_value"].sum()
+                                                   / elig.loc[elig["direction"] == "uae_export", "value_exp"].sum()),
              "median_gap_by_direction": {k: float(v) for k, v in elig.groupby("direction")["mirror_gap"].median().items()},
              "baseline": cfg.get("baseline", "relative")}
     _write_md(stats, summ, cs, cfg, out / "macro_results.md")
+    import json as _json
+    top = [{"direction": x["direction"], "partner_iso": x["partner_iso"], "hs6": x["hs6"],
+            "product": x.get("product", ""), "year": int(x["year"]), "rule_score": float(x["rule_score"]),
+            "value_exp": float(x["value_exp"]), "value_imp": float(x["value_imp"]),
+            "why": x["why_flagged"], "benign": x["benign_explanations"],
+            "iforest_flag": bool(x.get("iforest_flag", False))} for _, x in cs.iterrows()]
+    (out / "macro_summary.json").write_text(_json.dumps(
+        {"label": "real (UN Comtrade)", "stats": stats, "config": {k: cfg[k] for k in (
+            "baseline", "gap_z_threshold", "gap_threshold", "uv_z_threshold", "cif_fob_factor", "min_flow_usd",
+            "injection_share", "injection_repeats")},
+         "injection": summ.to_dict("records"), "case_study": top}, indent=2, default=float))
     _figure(summ, out / "recall_vs_injection.png")
     return {"stats": stats, "summary": summ, "case_study": cs}
 
@@ -454,6 +488,11 @@ def _write_md(st: dict, summ: pd.DataFrame, cs: pd.DataFrame, cfg: dict, path: P
          f"- Median mirror gap by direction: " + ", ".join(
              f"{k} {v:+.2f} (importer reports {np.exp(v):.2f}x the CIF-adjusted exporter value)"
              for k, v in st["median_gap_by_direction"].items()),
+         f"- UAE exports, re-exports reported explicitly: re-exports (RX) are {st['uae_export_rx_share_of_value']:.0%} of "
+         f"the UAE-reported export value in these pairs. Median gap against X + RX {st['uae_export_median_gap_x_plus_rx']:+.2f} "
+         f"(partner reports {np.exp(st['uae_export_median_gap_x_plus_rx']):.2f}x); against domestic exports X only "
+         f"{st['uae_export_median_gap_x_only']:+.2f} ({np.exp(st['uae_export_median_gap_x_only']):.2f}x; "
+         f"{st['uae_export_pairs_with_x']:,} pairs with X > 0)",
          f"- Flag rate on real data: rules ({st['baseline']} baseline) {st['rule_flag_rate']:.1%}, "
          f"Isolation Forest {st['if_flag_rate']:.1%}; agreement {st['agree']:.1%}", "",
          "**Fixed thresholds failed on real data.** The absolute thresholds set before seeing real data "

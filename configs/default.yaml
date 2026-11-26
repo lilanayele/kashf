@@ -6,9 +6,10 @@
 invoice:
   # price benchmark
   price_z: 2.0                # |robust z| at which an invoice line is flagged (calibration weighs it)
-  # route (illustrative codes; load the current FATF lists in production)
-  high_risk: [XA, XB, XC]
+  # route: "fatf" = union of the FATF call-for-action and increased-monitoring lists (configs/fatf_lists.yaml)
+  high_risk: fatf
   max_legs: 4
+  u_turn_days: 90             # export from AE re-imported from the same foreign party within this many days
   # documents
   qty_tolerance: 0.03         # invoice vs transport-document quantity
   weight_tolerance: 0.15      # invoice vs transport-document gross weight
@@ -21,8 +22,11 @@ invoice:
   cycle_hop_days: 60
   cycle_qty_tolerance: 0.10
   cycle_max_expansions: 200000  # hard cap on search steps per HS code (guards against blow-up on big uploads)
+  entity_resolution: fuzzy    # exact | fuzzy (normalised phones/addresses + rapidfuzz names; kashf/entities.py)
+  name_similarity: 90         # 0-100, near-identical company names (only links with a similar address)
+  address_similarity: 85      # 0-100
   # scoring
-  alert_threshold: 0.44       # (tuned) on seed 0 with the shipped calibration; see results/summary.json
+  alert_threshold: 0.33       # (tuned) kashf_full on seed 0 with kashf/models/calibration.json (= results/calibration.json)
   weights: {price: 1.0, route: 1.0, documents: 1.0, graph: 1.0}
 
 api:
