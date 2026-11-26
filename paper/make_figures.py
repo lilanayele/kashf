@@ -113,11 +113,12 @@ def injection() -> None:
 
 def synthetic_f1() -> None:
     C = js("results/summary.json")["configs"]
-    order = ["kashf_full", "kashf_heuristic", "minus_price", "minus_route", "minus_documents", "minus_graph",
-             "price_only", "isolation_forest", "checklist"]
-    labels = ["Kashf", "hand-set", "-price", "-route", "-docs", "-graph", "price only", "iForest", "checklist"]
-    hatch = ["", "..", "//", "//", "//", "//", "xx", "xx", "xx"]
-    shade = [K, G1, G2, G2, G2, G2, "white", "white", "white"]
+    order = ["kashf_full", "kashf_heuristic", "exact_entities", "minus_price", "minus_route", "minus_documents",
+             "minus_graph", "price_only", "iqr_price_filter", "isolation_forest", "checklist"]
+    labels = ["Kashf", "hand-set", "exact ER", "-price", "-route", "-docs", "-graph", "price only", "IQR filter",
+              "iForest", "checklist"]
+    hatch = ["", "..", "..", "//", "//", "//", "//", "xx", "xx", "xx", "xx"]
+    shade = [K, G1, G1, G2, G2, G2, G2, "white", "white", "white", "white"]
     fig, ax = plt.subplots(figsize=(3.4, 2.1))
     v = [C[c]["f1"]["mean"] for c in order]
     e = [C[c]["f1"]["sd"] for c in order]
@@ -135,7 +136,7 @@ def typology() -> None:
     C = js("results/summary.json")["configs"]
     typ = list(C["kashf_full"]["recall_by_typology"])
     cfg = [("kashf_full", K, ""), ("price_only", G2, "//"), ("isolation_forest", "white", "xx"), ("checklist", "white", "..")]
-    fig, ax = plt.subplots(figsize=(3.4, 2.2))
+    fig, ax = plt.subplots(figsize=(3.4, 2.4))
     x = np.arange(len(typ))
     w = 0.2
     for i, (c, col, h) in enumerate(cfg):
@@ -162,12 +163,13 @@ def robustness() -> None:
     a1.set_ylim(0.5, 1)
     a1.legend(frameon=False, fontsize=5.5)
     s = r["shift"]
-    vals = [s["same_generator"]["f1"]["mean"], s["shifted_generator"]["f1"]["mean"]]
-    a2.bar([0, 1], vals, color=[K, "white"], edgecolor=K, hatch=["", "//"], lw=0.6,
-           yerr=[s["same_generator"]["f1"]["sd"], s["shifted_generator"]["f1"]["sd"]], capsize=2)
+    ks = ["same_generator", "shifted_generator", "alt_typologies"]
+    vals = [s[k]["f1"]["mean"] for k in ks]
+    a2.bar([0, 1, 2], vals, color=[K, "white", G2], edgecolor=K, hatch=["", "//", ".."], lw=0.6,
+           yerr=[s[k]["f1"]["sd"] for k in ks], capsize=2)
     for i, v in enumerate(vals):
         a2.text(i, v + 0.03, f"{v:.2f}", ha="center", fontsize=6)
-    a2.set_xticks([0, 1], ["same\ngenerator", "shifted\ngenerator"], fontsize=6)
+    a2.set_xticks([0, 1, 2], ["same", "noise\nshift", "other\nmechanics"], fontsize=5.5)
     a2.set_ylabel("F1")
     a2.set_ylim(0, 1)
     fig.tight_layout()

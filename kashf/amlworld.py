@@ -8,9 +8,10 @@ HI-Small_Patterns.txt from https://www.kaggle.com/datasets/ealtman2019/ibm-trans
 Mapping (what transfers and what does not):
   * account (bank id + account id)  -> entity. No names, directors, phones, addresses: the shared-
     identifier part of the graph detector cannot fire, so only the circular-trade rule is tested.
-  * transfer payer -> payee          -> an invoice with seller = payee, buyer = payer (money flows
-    against goods), date = transfer day, quantity = amount paid, "HS code" = payment currency, so only
-    amounts in the same currency are compared. Self-transfers (payer = payee) are kept and scored
+  * transfer payer -> payee          -> a trade in which value passes from payer to payee
+    (seller = payer, buyer = payee), so a chain of transfers forward in time maps to goods moving forward
+    along a chain of companies, which is what the circular-trade rule follows; date = transfer day,
+    quantity = amount paid, "HS code" = payment currency, so only amounts in the same currency are compared. Self-transfers (payer = payee) are kept and scored
     like any transfer, but no rule can fire on them.
   * Two runs of Kashf's rule: "as shipped" (calendar-day dates, goods = currency, raw amounts) and
     "adapted" (timestamps so same-day hops keep their order, amounts converted to USD at the dataset's
@@ -93,8 +94,8 @@ def to_invoices(df: pd.DataFrame, adapted: bool = False) -> pd.DataFrame:
     else:
         date = pd.to_datetime(df["ts"]).dt.date.astype(str)
         hs, q = df["cur_paid"].values, df["amt_paid"]
-    return pd.DataFrame({"invoice_no": np.arange(len(df)).astype(str), "date": np.asarray(date), "seller_id": b.values,
-                         "buyer_id": a.values, "hs6": hs, "quantity": np.asarray(q)})
+    return pd.DataFrame({"invoice_no": np.arange(len(df)).astype(str), "date": np.asarray(date), "seller_id": a.values,
+                         "buyer_id": b.values, "hs6": hs, "quantity": np.asarray(q)})
 
 
 def kashf_cycles(inv: pd.DataFrame, s: Settings) -> np.ndarray:
