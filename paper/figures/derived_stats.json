@@ -1,0 +1,46 @@
+{
+ "_source": "results/macro/flags.csv (computed by paper/make_figures.py derived_stats)",
+ "eligible": 9727,
+ "rule_flags": 909,
+ "if_flags": 487,
+ "both_flags": 378,
+ "reason_value_gap": 373,
+ "reason_weight_gap": 381,
+ "reason_unit_value": 371,
+ "flag_rate_by_direction": {
+  "uae_export": 0.07776384160544705,
+  "uae_import": 0.11456825856246985
+ },
+ "pairs_by_direction": {
+  "uae_export": 5581,
+  "uae_import": 4146
+ },
+ "flag_rate_by_year": {
+  "2020": 0.09039280643634642,
+  "2021": 0.09788702026735661,
+  "2022": 0.08613364233294708,
+  "2023": 0.09903917220990392
+ },
+ "top_hs6_by_flags": [
+  [
+   "271019",
+   79
+  ],
+  [
+   "710812",
+   76
+  ],
+  [
+   "870899",
+   54
+  ],
+  [
+   "850440",
+   44
+  ],
+  [
+   "271012",
+   39
+  ]
+ ]
+}
