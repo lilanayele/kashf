@@ -437,6 +437,17 @@ def run(out: Path, cfg_all: Optional[dict] = None, seed: int = 0) -> dict:
              "median_gap_by_direction": {k: float(v) for k, v in elig.groupby("direction")["mirror_gap"].median().items()},
              "baseline": cfg.get("baseline", "relative")}
     _write_md(stats, summ, cs, cfg, out / "macro_results.md")
+    import json as _json
+    top = [{"direction": x["direction"], "partner_iso": x["partner_iso"], "hs6": x["hs6"],
+            "product": x.get("product", ""), "year": int(x["year"]), "rule_score": float(x["rule_score"]),
+            "value_exp": float(x["value_exp"]), "value_imp": float(x["value_imp"]),
+            "why": x["why_flagged"], "benign": x["benign_explanations"],
+            "iforest_flag": bool(x.get("iforest_flag", False))} for _, x in cs.iterrows()]
+    (out / "macro_summary.json").write_text(_json.dumps(
+        {"label": "real (UN Comtrade)", "stats": stats, "config": {k: cfg[k] for k in (
+            "baseline", "gap_z_threshold", "gap_threshold", "uv_z_threshold", "cif_fob_factor", "min_flow_usd",
+            "injection_share", "injection_repeats")},
+         "injection": summ.to_dict("records"), "case_study": top}, indent=2, default=float))
     _figure(summ, out / "recall_vs_injection.png")
     return {"stats": stats, "summary": summ, "case_study": cs}
 
