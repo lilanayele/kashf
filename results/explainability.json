@@ -1,0 +1,79 @@
+{
+  "synthetic": {
+    "label": "SYNTHETIC (kashf.generate), held-out seeds",
+    "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "invoices_per_seed": 20000,
+    "alert_threshold": 0.4422,
+    "attribution_by_typology": {
+      "over_invoicing": {
+        "mean": 1.0,
+        "seeds": 5
+      },
+      "under_invoicing": {
+        "mean": 1.0,
+        "seeds": 5
+      },
+      "phantom_shipment": {
+        "mean": 1.0,
+        "seeds": 5
+      },
+      "multiple_invoicing": {
+        "mean": 1.0,
+        "seeds": 5
+      },
+      "misdescription": {
+        "mean": 1.0,
+        "seeds": 5
+      },
+      "circular_trading": {
+        "mean": 1.0,
+        "seeds": 5
+      },
+      "shell_cluster": {
+        "mean": 1.0,
+        "seeds": 5
+      }
+    },
+    "deletion": {
+      "all_alerts": {
+        "alerts": 3517,
+        "drop_top_removes_alert": 0.8837077054307648,
+        "drop_random_removes_alert": 0.7591697469434177,
+        "top_signal_alone_is_alert": 0.9994313335228888
+      },
+      "multi_signal_alerts": {
+        "alerts": 1249,
+        "drop_top_removes_alert": 0.6725380304243395,
+        "drop_random_removes_alert": 0.32185748598879105,
+        "top_signal_alone_is_alert": 0.9983987189751802
+      },
+      "true_alerts": {
+        "alerts": 3085,
+        "drop_top_removes_alert": 0.8674230145867099,
+        "drop_random_removes_alert": 0.7461912479740681,
+        "top_signal_alone_is_alert": 1.0
+      },
+      "false_alerts": {
+        "alerts": 432,
+        "drop_top_removes_alert": 1.0,
+        "drop_random_removes_alert": 0.8518518518518519,
+        "top_signal_alone_is_alert": 0.9953703703703703
+      },
+      "share_single_signal": 0.6448677850440716
+    }
+  },
+  "macro": {
+    "label": "REAL (UN Comtrade), results/macro/flags.csv",
+    "pairs_flagged_by_both": 378,
+    "if_flags_reproduced": 1.0,
+    "shap_top1_in_fired_rule": 0.9708994708994709,
+    "shap_top2_contains_fired_rule": 0.9947089947089947,
+    "random_top1_expected": 0.3630952380952381
+  }
+}

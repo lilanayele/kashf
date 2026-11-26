@@ -43,6 +43,15 @@ Criminals use trade "to move money, rather than goods", and TBML is hard to spot
 
 **Calibrated scoring.** Each rule's weight is its smoothed precision on a labelled tuning set (`(TP + 1) / (fired + 2)`), with price signals calibrated per band of the z-score. Signals combine by noisy-OR, `score = 1 − Π(1 − wᵢ)`. The weight shown next to each piece of evidence reads as "signals like this were laundering X% of the time".
 
+### What "explainable" means here, and how it is measured
+
+**Definition.** An alert is explainable when it lists the specific evidence that produced it (the values, the benchmark and the rule) **and** removing that evidence removes the alert. Kashf's score is built from the evidence (eq. 3), so this can be tested directly. Numbers from `results/explainability.md` (`python -m kashf.explain_eval`):
+
+- **Evidence attribution (synthetic):** for every planted typology, 100% of true alerts cite a rule that matches the planted mechanism. This is partly by construction (the detectors were written for these typologies), so it shows the evidence is *about the right thing*, not that the detectors generalise.
+- **Deletion test (synthetic, 3,517 alerts on 5 held-out seeds):** dropping an alert's strongest signal removes the alert in 88.4% of cases, against 75.9% for dropping a random signal. For alerts with two or more signals the figures are 67.3% vs 32.2%: about a third of multi-signal alerts survive losing their strongest signal because a second, independent signal also crosses the threshold (redundant evidence, which is what an analyst would want).
+- **Macro layer (real UN Comtrade):** for the 378 pairs flagged by both the rules and the Isolation Forest, SHAP's top feature belongs to a rule that fired in 97.1% of cases (random: 36.3%).
+- **Not yet measured:** whether the evidence makes analysts faster or more accurate. `docs/user_study.md` is a protocol with an empty results table; no study has been run.
+
 ## Synthetic benchmark (invoice layer)
 
 Evaluation on the synthetic UAE trade benchmark: about 4% of invoices are laundering across 7 typologies. Thresholds and calibration were tuned on seed 0, and results are the mean over 5 held-out seeds of 20,000 invoices each. Full tables are in [`results/results.md`](results/results.md).
@@ -285,7 +294,8 @@ tests/
 - The macro layer uses real data but has no ground-truth laundering labels; its detection rates are measured on injected distortions, and its precision counts every natural anomaly as a false positive.
 - Mirror gaps have many benign causes (re-exports, free zones, CIF/FOB, timing, classification); see `docs/DATA_CARD.md`.
 - Reference prices are averages over broad HS codes, so legitimate premium goods can look over-priced. The evidence view shows the benchmark so an analyst can judge.
-- The high-risk jurisdiction list is illustrative (XA, XB, XC). Load the current FATF lists in production.
+- High-risk jurisdictions come from the FATF lists of 30 October 2026 (`configs/fatf_lists.yaml`); they change three times a year, so run `scripts/update_fatf_lists.py` and re-check before use.
+- Explanations have not been tested with analysts (see `docs/user_study.md`).
 - Kashf supports human decisions. It does not file reports or label anyone a criminal. No real customer data was used to build it.
 
 ## Author

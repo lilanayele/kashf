@@ -18,6 +18,8 @@ const MAC = J("results/macro/macro_summary.json");
 const CARD = fs.readFileSync(path.join(ROOT, "docs/DATA_CARD.md"), "utf8");
 const FATF = fs.readFileSync(path.join(ROOT, "configs/fatf_lists.yaml"), "utf8");
 const DER = J("paper/figures/derived_stats.json");
+const EXP = J("results/explainability.json");
+const S_EXP = "results/explainability.json";
 const S_DER = "paper/figures/derived_stats.json (from results/macro/flags.csv)";
 const COMMIT = execSync("git rev-parse --short HEAD", { cwd: ROOT }).toString().trim();
 
@@ -191,12 +193,12 @@ body.push(P0("Four detectors read a trader's records: a price benchmark (eq. 2 o
 body.push(EQ("s = 1 − ∏_r ( 1 − w_r )", 3));
 body.push(P0("An invoice is an alert when s reaches a threshold tuned on the tuning instance. Every signal carries a sentence of evidence built from the records, which the dashboard shows next to the score."));
 body.push(H2("C. What \u201cexplainable\u201d means in Kashf"));
-body.push(P0("An analyst who escalates or closes a TBML alert has to justify the decision in a case file, so a score alone is not enough: the analyst needs the facts behind it and a way to check them. Kashf is explainable in four concrete senses."));
+body.push(P0("An analyst who escalates or closes a TBML alert has to justify the decision in a case file, so a score alone is not enough: the analyst needs the facts behind it and a way to check them. We call an alert *explainable* when it lists the specific evidence (values, benchmark and rule) that produced it, **and removing that evidence removes the alert**. The second half is testable, and Section VII-B tests it. Kashf meets the first half in four ways."));
 body.push(B("**Transparent by design.** Every detector is a rule a compliance officer can read: a robust z-score against a stated reference (eq. 2), a document check, a graph pattern or a listed jurisdiction. Thresholds are in readable units (standard deviations, value ratios), not learned weights."));
 body.push(B("**Decomposable score.** Each rule's weight w_r is its measured precision on the tuning set, and eq. 3 combines them, so the contribution of every signal to an alert can be read off and removed (the ablations in Table V do exactly this)."));
 body.push(B("**Evidence in the analyst's terms.** Each signal is rendered as a sentence with the numbers from the records. A real macro flag (Table IV, row 2) reads: *\u201c" + V(MAC.case_study[1].why.split("; net weight")[0], S_MAC + " case_study[1].why (value-gap clause)", String) + "\u201d*."));
 body.push(B("**Benign explanations first.** Every macro flag lists the innocent causes to rule out (re-export attribution, CIF/FOB margins, timing, units), so the explanation argues against the alert as well as for it."));
-body.push(P0("Only the Isolation Forest comparison needs a post-hoc explanation; there, SHAP [7] attributes each anomaly score to the four gap and unit-value features. Kashf\u2019s own alerts need none, because the score is built from the explanations rather than explained after the fact."));
+body.push(P0("Only the Isolation Forest comparison needs a post-hoc explanation; there, SHAP [7] attributes each anomaly score to the four gap and unit-value features. Kashf\u2019s own alerts need none, because the score is built from the explanations rather than explained after the fact. Whether the evidence helps analysts decide faster or better is a separate question that needs a user study; we provide a protocol (docs/user_study.md) but have not run it."));
 
 body.push(H1("V. Experiments"));
 SEC = "V. Experiments";
@@ -217,6 +219,7 @@ body.push(...TABLE("Reasons behind real rule flags (a flag can have several)",
    [`Unit value beyond ${cfgM.uv_z_threshold} robust SD of world exports`, V(DER.reason_unit_value, S_DER + " reason_unit_value", comma)],
    ...DER.top_hs6_by_flags.slice(0, 3).map(([h, n], i) => [`Top product ${i + 1}: HS ${h}`, V(n, S_DER + ` top_hs6_by_flags[${i}]`, comma)])],
   [3400, 1500], "Real (UN Comtrade). Source: results/macro/flags.csv."));
+body.push(P0(`The two detectors also agree on *why*: for the ${V(EXP.macro.pairs_flagged_by_both, S_EXP + " macro.pairs_flagged_by_both", comma)} pairs both flag, the feature SHAP ranks first for the Isolation Forest belongs to a rule that fired in ${V(EXP.macro.shap_top1_in_fired_rule, S_EXP + " macro.shap_top1_in_fired_rule", pc)} of cases, against ${V(EXP.macro.random_top1_expected, S_EXP + " macro.random_top1_expected", pc)} expected by chance.`));
 body.push(H2("C. Detection of injected misinvoicing"));
 const sizes = [0.1, 0.5, 1.0, 2.0, 4.0, 9.0], lab = (s) => s >= 1 ? `×${(1 + s).toFixed(0)}` : `±${(100 * s).toFixed(0)}%`;
 body.push(...TABLE("Recall on real flows with injected distortion (real flows + synthetic distortion)",
@@ -250,6 +253,8 @@ body.push({ SPAN: FIG("macro", "paper/figures/screen_macro_diamonds.png", "Macro
 
 body.push(H1("VII. Results: Synthetic Benchmark"));
 SEC = "VII. Results (synthetic)";
+body.push(H2("A. Main results and ablations"));
+SEC = "VII. Results (synthetic)";
 const cfgs = ["kashf_full", "kashf_heuristic", "minus_price", "minus_route", "minus_documents", "minus_graph", "price_only", "isolation_forest", "checklist"];
 const NAME = { kashf_full: "Kashf (calibrated)", kashf_heuristic: "Kashf (hand-set)", minus_price: "– price", minus_route: "– route",
   minus_documents: "– documents", minus_graph: "– graph", price_only: "Price only", isolation_forest: "Isolation Forest", checklist: "Checklist" };
@@ -262,7 +267,17 @@ body.push(...TABLE("Invoice layer on held-out synthetic instances (mean over 5 �
 body.push(P0(`Table ${roman(TABN)} gives the main results and ablations. The full system reaches F1 ${V(full.f1.mean, S_SUM + " configs.kashf_full.f1.mean", f3)} at a ${V(full.far.mean, S_SUM + " configs.kashf_full.far.mean", (x) => pc(x, 2))} false-alarm rate, against ${V(C.price_only.f1.mean, S_SUM + " configs.price_only.f1.mean", f3)} for price benchmarking alone; with real reference prices, whose dispersion is wider, it reaches ${V(RF.f1.mean, S_RR + " configs.kashf_full.f1.mean", f3)}. Removing the document or graph detector costs most (F1 ${V(C.minus_documents.f1.mean, S_SUM + " configs.minus_documents.f1.mean", f3)} and ${V(C.minus_graph.f1.mean, S_SUM + " configs.minus_graph.f1.mean", f3)}); removing the route detector changes nothing (${V(C.minus_route.f1.mean, S_SUM + " configs.minus_route.f1.mean", f3)}), because no planted typology uses routing. Fig. ${FIGN + 1} shows F1 by configuration and Fig. ${FIGN + 2} recall by typology.`));
 body.push(...FIG("f1", "paper/figures/fig_synthetic_f1.png", "F1 by configuration on held-out synthetic instances (error bars: s.d.). Source: results/summary.json."));
 body.push(...FIG("typ", "paper/figures/fig_typology.png", "Recall by typology, synthetic benchmark. Source: results/summary.json."));
-body.push(H2("Robustness"));
+body.push(H2("B. Explanation faithfulness"));
+const Dl = EXP.synthetic.deletion, rowsD = [["All alerts", "all_alerts"], ["≥ 2 signals", "multi_signal_alerts"], ["True alerts", "true_alerts"], ["False alerts", "false_alerts"]];
+body.push(P0(`For every planted typology, ${V(Math.min(...Object.values(EXP.synthetic.attribution_by_typology).map((v) => v.mean)), S_EXP + " synthetic.attribution_by_typology (min over typologies)", pc)} of true alerts cite a rule that matches the planted mechanism; this is partly by construction, since the detectors were written for these typologies. The deletion test is stricter (Table ${roman(TABN + 1)}): removing an alert's strongest signal and re-scoring with eq. 3 removes the alert in ${V(Dl.all_alerts.drop_top_removes_alert, S_EXP + " synthetic.deletion.all_alerts.drop_top_removes_alert", pc)} of cases, against ${V(Dl.all_alerts.drop_random_removes_alert, S_EXP + " synthetic.deletion.all_alerts.drop_random_removes_alert", pc)} for a random signal. ${V(Dl.share_single_signal, S_EXP + " synthetic.deletion.share_single_signal", pc)} of alerts rest on a single signal; among the rest, ${V(1 - Dl.multi_signal_alerts.drop_top_removes_alert, S_EXP + " 1 - synthetic.deletion.multi_signal_alerts.drop_top_removes_alert", pc)} survive losing their strongest signal because a second, independent signal also crosses the threshold. That is redundant evidence, not unfaithful evidence: removing *all* cited evidence removes every alert, because the score is computed from nothing else.`));
+body.push(...TABLE("Deletion test: share of alerts removed when one signal is dropped (synthetic)",
+  ["Alerts", "n", "Drop strongest", "Drop random", "Strongest alone ≥ thr."],
+  rowsD.map(([lab, k]) => [lab, V(Dl[k].alerts, S_EXP + ` synthetic.deletion.${k}.alerts`, comma),
+    V(Dl[k].drop_top_removes_alert, S_EXP + ` synthetic.deletion.${k}.drop_top_removes_alert`, pc),
+    V(Dl[k].drop_random_removes_alert, S_EXP + ` synthetic.deletion.${k}.drop_random_removes_alert`, pc),
+    V(Dl[k].top_signal_alone_is_alert, S_EXP + ` synthetic.deletion.${k}.top_signal_alone_is_alert`, pc)]),
+  [1300, 700, 1000, 1000, 1200], `Held-out seeds ${EXP.synthetic.seeds.join(", ")}; alert threshold ${EXP.synthetic.alert_threshold.toFixed(3)}. Source: results/explainability.json.`));
+body.push(H2("C. Robustness"));
 body.push(P0(`Varying the alert threshold from ${V(Object.keys(ROB.alert_threshold)[0], S_ROB + ' alert_threshold keys (min)', String)} to ${V(Object.keys(ROB.alert_threshold).slice(-1)[0], S_ROB + ' alert_threshold keys (max)', String)} trades recall for precision (Fig. ${FIGN + 1}, left). Under generator shift, F1 falls from ${V(same.f1.mean, S_ROB + " shift.same_generator.f1.mean", f3)} to ${V(shifted.f1.mean, S_ROB + " shift.shifted_generator.f1.mean", f3)} and the false-alarm rate rises from ${V(same.far.mean, S_ROB + " shift.same_generator.far.mean", (x) => pc(x, 2))} to ${V(shifted.far.mean, S_ROB + " shift.shifted_generator.far.mean", (x) => pc(x, 2))}: weights tuned on one population do not fully transfer, so calibration must be refit for each data source.`));
 const sw = ROB.sweep;
 const swRows = [];
@@ -277,7 +292,7 @@ body.push(...TABLE("Sensitivity of F1 to hand-set thresholds (synthetic; re-tune
   "Flat ranges show insensitivity on this generator, not robustness on real documents. Source: results/robustness.json."));
 body.push(P0(`Table ${roman(TABN)} shows that F1 changes little across the hand-set thresholds.`));
 body.push(...FIG("rob", "paper/figures/fig_robustness.png", "Left: precision, recall and F1 vs alert threshold. Right: F1 on the tuning generator vs a shifted generator. Synthetic. Source: results/robustness.json."));
-body.push(H2("Analyst view"));
+body.push(H2("D. Analyst view"));
 body.push(P0(`The dashboard lists alerts by score (Fig. ${FIGN + 1}); opening one shows each signal's evidence and calibrated weight (Fig. ${FIGN + 2}) and the counterparty network around the seller (Fig. ${FIGN + 3}). The screenshots use synthetic invoices priced around real Comtrade medians.`));
 body.push(...FIG("alerts", "paper/figures/screen_alerts.png", "Alert list (synthetic invoices): score, invoice, goods and the main reason in words."));
 body.push(...FIG("evidence", "paper/figures/screen_evidence.png", "Evidence panel for one alert (synthetic): each signal states the fact behind it and its calibrated weight."));
@@ -300,7 +315,7 @@ body.push(B("**Post-hoc baseline.** The peer baseline was chosen after seeing th
 body.push(B("**Assumptions.** A flat 10% CIF/FOB margin; Comtrade-estimated quantities excluded, which lowers coverage."));
 body.push(B("**Synthetic invoices.** The generator and detectors share an author, so typologies match what the detectors look for."));
 body.push(B("**Route detector** adds no F1 on this benchmark and is kept as context."));
-body.push(B("**Explanations not user-tested.** No analyst study measured whether the evidence sentences speed up or improve decisions; the claim is that each alert can be checked, not that checking is faster."));
+body.push(B("**Explanations not user-tested.** Faithfulness is measured (Section VII-B) but usefulness is not: no analyst study has measured whether the evidence speeds up or improves decisions. A protocol is in docs/user_study.md; its results table is empty."));
 body.push(B("**Aggregates.** Annual HS6 totals mix many traders; a laundering scheme smaller than reporting noise in its aggregate is invisible to the macro layer by construction."));
 body.push(B(`**Coverage.** ${st.hs6} products and ${st.years[0]}–${st.years[st.years.length-1]} only; results may differ for other goods and for partners that report late or suppress detail.`));
 body.push(P0("No customer, client or employer data was used. Macro flags concern country × product aggregates and never name a company. Kashf drafts evidence and benign explanations; decisions and any reports stay with human analysts."));
