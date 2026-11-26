@@ -25,14 +25,20 @@ STATIC = Path(__file__).parent / "static"
 MACRO_DIR = Path(__file__).resolve().parent.parent / "results" / "macro"
 
 
-def create_app(data_dir: str | Path | None = None, macro_dir: str | Path | None = None) -> FastAPI:
+def create_app(data_dir: str | Path | None = None, macro_dir: str | Path | None = None,
+               reference_path: str | Path | None = None) -> FastAPI:
+    """data_dir: invoice CSVs to load at start; macro_dir: results of `python -m kashf.macro`;
+    reference_path: reference price CSV (e.g. data/reference_comtrade.csv); None = illustrative table."""
     app = FastAPI(title="Kashf", version="0.1.0")
     state: dict = {}
-    max_bytes = int(float(load_yaml().get("api", {}).get("max_upload_mb", 25)) * 1024 * 1024)
+    max_bytes = int(float(load_yaml().get("api", {}).get("max_upload_mb", 10)) * 1024 * 1024)
+    from kashf import reference as _reference
+    ref = _reference.load(reference_path) if reference_path else None
+    state["reference"] = str(reference_path) if reference_path else "illustrative (kashf/reference.py)"
 
     def load(tables: dict) -> None:
         tables = {k: v for k, v in tables.items() if k != "labels"}   # never expose ground truth
-        state["res"] = analyse(tables)
+        state["res"] = analyse(tables, ref=ref)
         state["links"], state["hubs"] = link_graph(tables["entities"], Settings.from_yaml())
 
     if data_dir:
@@ -42,6 +48,10 @@ def create_app(data_dir: str | Path | None = None, macro_dir: str | Path | None 
         if "res" not in state:
             raise HTTPException(404, "No data loaded yet. Upload CSV files first.")
         return state["res"]
+
+    @app.get("/health")
+    def health():
+        return {"status": "ok"}
 
     @app.get("/", response_class=HTMLResponse)
     def index():
@@ -178,7 +188,10 @@ def create_app(data_dir: str | Path | None = None, macro_dir: str | Path | None 
     async def upload(files: list[UploadFile] = File(...)):
         got, total = {}, 0
         for f in files:
-            name = Path(f.filename or "").stem
+            fname = f.filename or ""
+            if not fname.lower().endswith(".csv"):
+                raise HTTPException(415, f"only .csv files are accepted (got {Path(fname).name or 'unnamed'})")
+            name = Path(fname).stem
             if name in TABLES:
                 data = await f.read(max_bytes - total + 1)     # never read more than the limit allows
                 total += len(data)

@@ -30,7 +30,8 @@ echo "== 5/6 macro layer on real mirror data -> results/macro/"
 python -m kashf.macro --out results/macro
 
 echo "== 6/6 invoice layer with the real reference table -> results/real_reference/"
-python -m kashf.evaluate --seeds 5 --reference data/reference_comtrade.csv --out results/real_reference
+python -m kashf.evaluate --seeds 5 --reference data/reference_comtrade.csv --out results/real_reference \
+  || echo "WARN: invoice layer with the real reference failed (see the error above); macro results are still valid"
 
 echo
 echo "Done. Read results/macro/macro_results.md (real data) and results/real_reference/results.md."

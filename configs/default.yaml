@@ -25,7 +25,7 @@ invoice:
   weights: {price: 1.0, route: 1.0, documents: 1.0, graph: 1.0}
 
 api:
-  max_upload_mb: 25           # per request, all files together
+  max_upload_mb: 10           # per request, all files together; CSV files only
 
 comtrade:
   reporter: 784               # United Arab Emirates

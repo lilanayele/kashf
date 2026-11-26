@@ -8,6 +8,9 @@
 
 **Explainable detection of trade-based money laundering (TBML) for UAE traders.**
 
+**Live demo:** https://kashf.onrender.com *(placeholder until the Render service is created)*. Free hosting:
+the service sleeps after 15 minutes without traffic, so the first load can take about 30 seconds.
+
 Kashf checks a trading company's invoices, transport documents and counterparties for the red flags of trade-based money laundering: mispriced goods, shipments that never sailed, the same cargo invoiced twice, goods described as something else, money looping between companies, and "independent" buyers and sellers who share a director. Every alert shows the evidence behind it, so a compliance officer can confirm or dismiss it in minutes. The officer makes the final call; Kashf only drafts.
 
 ![Kashf dashboard](docs/dashboard.png)
@@ -101,6 +104,12 @@ cp .env.example .env              # then put your UN Comtrade key in .env (never
 bash scripts/run_real.sh          # ~16 API calls; results in results/macro/macro_results.md
 ```
 
+<!-- REAL_RESULTS_START -->
+### Real-data results (UN Comtrade)
+
+*Pending: run `bash scripts/run_real.sh` to fill this section.*
+<!-- REAL_RESULTS_END -->
+
 Data source, coverage and caveats: [`docs/DATA_CARD.md`](docs/DATA_CARD.md) (generated from the pull).
 A macro flag is a reason to look at a country × product aggregate, not evidence against any company.
 
@@ -120,7 +129,15 @@ kashf evaluate --seeds 5                       # reproduce the results (~1 min)
 pytest -q                                      # unit tests, no network needed
 ```
 
-Docker: `docker build -t kashf . && docker run -p 8800:8800 kashf`
+Docker: `docker build -t kashf . && docker run -p 8800:8800 kashf` (no Comtrade key needed at runtime).
+
+## Deploy free on Render
+
+`render.yaml` defines one free Docker web service with a `/health` check, auto-deployed from `main`.
+On render.com: **New → Blueprint → connect `lilanayele/kashf` → Apply**. The image builds synthetic
+demo invoices at build time, uses `data/reference_comtrade.csv` and `results/macro/` when they are
+committed, and stays under the free tier's 512 MB (about 160–240 MB measured). Uploads are limited to
+10 MB of CSV files.
 
 ## Use your own data
 

@@ -3,11 +3,18 @@ __pycache__/
 .venv/
 *.egg-info/
 .pytest_cache/
-data/
+data/*
 output/
 !data/.gitkeep
+# derived from UN Comtrade (small, needed by the live demo); raw pulls in data/raw/ stay local
+!data/reference_comtrade.csv
+!data/reference_comtrade_detail.csv
 
 # secrets
 .env
 .env.*
 !.env.example
+
+# large macro intermediates (contain per-pair Comtrade values); summaries and flags are committed
+results/macro/mirror_pairs.csv
+results/macro/injection_runs.csv

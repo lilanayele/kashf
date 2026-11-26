@@ -5,6 +5,7 @@ Thresholds marked (tuned) in the YAML are re-chosen on the tuning seed by kashf.
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass, field, fields
 from pathlib import Path
 from typing import Any, Optional, Union
@@ -13,10 +14,10 @@ DEFAULT_CONFIG = Path(__file__).resolve().parent.parent / "configs" / "default.y
 
 
 def load_yaml(path: Optional[Union[str, Path]] = None) -> dict[str, Any]:
-    """Load the YAML config: the given path, else configs/default.yaml at the repo root."""
+    """Load the YAML config: the given path, else $KASHF_CONFIG, else configs/default.yaml at the repo root."""
     import yaml
 
-    p = Path(path) if path else DEFAULT_CONFIG
+    p = Path(path) if path else Path(os.environ.get("KASHF_CONFIG", DEFAULT_CONFIG))
     if not p.exists():
         raise FileNotFoundError(f"config not found: {p}")
     return yaml.safe_load(p.read_text()) or {}

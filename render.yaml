@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: kashf
+    runtime: docker
+    plan: free
+    branch: main
+    autoDeploy: true
+    healthCheckPath: /health
+    dockerfilePath: ./Dockerfile

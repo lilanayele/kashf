@@ -1,0 +1,10 @@
+.git
+.venv
+.env
+.env.*
+data/raw
+data/demo
+output
+**/__pycache__
+.pytest_cache
+paper/*.docx

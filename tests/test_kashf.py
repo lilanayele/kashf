@@ -191,3 +191,11 @@ def test_cycle_search_is_capped(world):
     s = dc_replace(Settings.from_yaml(), cycle_max_expansions=10)
     sig = graph_detector(world["invoices"], world["entities"], s)   # must return, not hang
     assert isinstance(sig, list)
+
+
+def test_health_and_csv_only_upload():
+    from kashf.api import create_app
+    c = TestClient(create_app())
+    assert c.get("/health").json() == {"status": "ok"}
+    r = c.post("/api/upload", files=[("files", ("invoices.xlsx", b"x", "application/octet-stream"))])
+    assert r.status_code == 415
