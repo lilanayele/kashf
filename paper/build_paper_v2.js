@@ -145,7 +145,7 @@ const keywords = new Paragraph({ alignment: AlignmentType.JUSTIFIED, spacing: { 
 
 const body = [];
 body.push(H1("I. Introduction"));
-body.push(P0("TBML moves value across borders by misrepresenting the price, quantity, quality or existence of traded goods [1], [2]. Each transaction can look like ordinary business, and the evidence is spread across invoices, transport documents, ownership records and national statistics. The UAE is a major re-export hub, and its national risk assessment names TBML a predominant threat, together with the abuse of front and shell companies and the vulnerability of free trade zones [9]."));
+body.push(P0("TBML moves value across borders by misrepresenting the price, quantity, quality or existence of traded goods [1], [2]. Each transaction can look like ordinary business, and the evidence is spread across invoices, transport documents, ownership records and national statistics. The UAE is a major re-export hub, and its national risk assessment names TBML a predominant threat, notes that legal persons are abused through front and shell entities, and that free trade zones are vulnerable to money laundering [9]."));
 body.push(P("Two families of methods exist. Statistical approaches compare declared prices with the distribution for the same product [3] or compare what trading partners report for the same flows [4]. Transaction-level approaches inspect one company's records. The first works on public data but cannot point at a company; the second can, but labelled data is confidential. Kashf combines both layers and is built to be checked: every alert carries the facts behind it and the innocent explanations to rule out first."));
 body.push(P("**Contributions.** (i) An open mirror-statistics layer on real UN Comtrade data for the UAE, with explicit handling of re-exports, estimated quantities and mixed quantity units; (ii) an honest measurement of what such statistics can detect, using misinvoicing injected into real flows; (iii) an invoice layer of four transparent detectors with calibrated weights, evaluated with ablations, a threshold sweep and a generator-shift test; (iv) code, data card and results released for reproduction. To our knowledge, no open tool combines both layers with per-flag benign explanations."));
 
@@ -190,6 +190,13 @@ body.push(H2("B. Invoice layer"));
 body.push(P0("Four detectors read a trader's records: a price benchmark (eq. 2 on invoice unit prices against the reference table), document consistency (missing, reused or contradictory transport documents and packing lists), a counterparty graph (shared directors, phones, addresses, accounts; circular trades of three to five hops) and route risk (transit through FATF-listed jurisdictions, loops, excess legs). Each rule r is weighted by its Laplace-smoothed precision on a labelled tuning set, w_r = (TP_r + 1)/(F_r + 2), and signals are combined by a noisy-OR:"));
 body.push(EQ("s = 1 − ∏_r ( 1 − w_r )", 3));
 body.push(P0("An invoice is an alert when s reaches a threshold tuned on the tuning instance. Every signal carries a sentence of evidence built from the records, which the dashboard shows next to the score."));
+body.push(H2("C. What \u201cexplainable\u201d means in Kashf"));
+body.push(P0("An analyst who escalates or closes a TBML alert has to justify the decision in a case file, so a score alone is not enough: the analyst needs the facts behind it and a way to check them. Kashf is explainable in four concrete senses."));
+body.push(B("**Transparent by design.** Every detector is a rule a compliance officer can read: a robust z-score against a stated reference (eq. 2), a document check, a graph pattern or a listed jurisdiction. Thresholds are in readable units (standard deviations, value ratios), not learned weights."));
+body.push(B("**Decomposable score.** Each rule's weight w_r is its measured precision on the tuning set, and eq. 3 combines them, so the contribution of every signal to an alert can be read off and removed (the ablations in Table V do exactly this)."));
+body.push(B("**Evidence in the analyst's terms.** Each signal is rendered as a sentence with the numbers from the records. A real macro flag (Table IV, row 2) reads: *\u201c" + V(MAC.case_study[1].why.split("; net weight")[0], S_MAC + " case_study[1].why (value-gap clause)", String) + "\u201d*."));
+body.push(B("**Benign explanations first.** Every macro flag lists the innocent causes to rule out (re-export attribution, CIF/FOB margins, timing, units), so the explanation argues against the alert as well as for it."));
+body.push(P0("Only the Isolation Forest comparison needs a post-hoc explanation; there, SHAP [7] attributes each anomaly score to the four gap and unit-value features. Kashf\u2019s own alerts need none, because the score is built from the explanations rather than explained after the fact."));
 
 body.push(H1("V. Experiments"));
 SEC = "V. Experiments";
@@ -293,6 +300,7 @@ body.push(B("**Post-hoc baseline.** The peer baseline was chosen after seeing th
 body.push(B("**Assumptions.** A flat 10% CIF/FOB margin; Comtrade-estimated quantities excluded, which lowers coverage."));
 body.push(B("**Synthetic invoices.** The generator and detectors share an author, so typologies match what the detectors look for."));
 body.push(B("**Route detector** adds no F1 on this benchmark and is kept as context."));
+body.push(B("**Explanations not user-tested.** No analyst study measured whether the evidence sentences speed up or improve decisions; the claim is that each alert can be checked, not that checking is faster."));
 body.push(B("**Aggregates.** Annual HS6 totals mix many traders; a laundering scheme smaller than reporting noise in its aggregate is invisible to the macro layer by construction."));
 body.push(B(`**Coverage.** ${st.hs6} products and ${st.years[0]}–${st.years[st.years.length-1]} only; results may differ for other goods and for partners that report late or suppress detail.`));
 body.push(P0("No customer, client or employer data was used. Macro flags concern country × product aggregates and never name a company. Kashf drafts evidence and benign explanations; decisions and any reports stay with human analysts."));
@@ -315,9 +323,9 @@ const REFS = [
   "F. T. Liu, K. M. Ting, and Z.-H. Zhou, “Isolation forest,” in Proc. 8th IEEE Int. Conf. Data Mining (ICDM), 2008, pp. 413–422, doi: 10.1109/ICDM.2008.17.",
   "S. M. Lundberg and S.-I. Lee, “A unified approach to interpreting model predictions,” in Adv. Neural Inf. Process. Syst. 30 (NIPS 2017), pp. 4765–4774. arXiv:1705.07874.",
   "FATF, “High-Risk Jurisdictions subject to a Call for Action” and “Jurisdictions under Increased Monitoring,” 30 Oct. 2026. https://www.fatf-gafi.org/en/publications/High-risk-and-other-monitored-jurisdictions/increased-monitoring-october-2026.html",
-  "UAE National AML/CFT Committee, “Money Laundering and Terrorist Financing Risk Assessment Report, United Arab Emirates (Public Version),” 2024. https://assets.adgm.com/download/assets/Updated+UAE+National+ML-TF+Risk+Assessment+Report+-+Public+Version.pdf/a4d0340a210211f085342e4ad712ca04",
-  "E. Altman et al., “Realistic synthetic financial transactions for anti-money laundering models,” in Adv. Neural Inf. Process. Syst. 36 (NeurIPS 2023), Datasets and Benchmarks Track. arXiv:2306.16424.",
-  "UN Comtrade, “What constitutes ‘transformed’ data for re-dissemination under the UN Comtrade license?” https://comtradewiki.azurewebsites.net/?p=893 (accessed Nov. 2026).",
+  "UAE National AML/CFT Committee, “Money Laundering and Terrorist Financing Risk Assessment Report, United Arab Emirates (Updated Public Version),” approved 2025 (ADGM FSRA Notice No. 37 of 2025). https://assets.adgm.com/download/assets/Updated+UAE+National+ML-TF+Risk+Assessment+Report+-+Public+Version.pdf/a4d0340a210211f085342e4ad712ca04",
+  "E. Altman et al., “Realistic synthetic financial transactions for anti-money laundering models,” in Adv. Neural Inf. Process. Syst. 36 (NeurIPS 2023), Datasets and Benchmarks Track, pp. 29851–29874. arXiv:2306.16424.",
+  "UN Comtrade, “What constitutes ‘transformed’ or ‘substantially different’ data for re-dissemination under the UN Comtrade license?” UN Comtrade Help Center, https://comtradewiki.azurewebsites.net/?p=893 (accessed Nov. 2026).",
 ];
 REFS.forEach((t) => body.push(new Paragraph({ numbering: { reference: "refs", level: 0 }, spacing: { after: 30 },
   children: [new TextRun({ text: t, font: FONT, size: 15 })] })));
