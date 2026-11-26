@@ -13,7 +13,6 @@ from kashf.detectors import run_all
 from kashf.scoring import score_entities, score_invoices
 
 DEFAULT_CALIBRATION = Path(__file__).parent / "models" / "calibration.json"
-DEFAULT_THRESHOLD = 0.44   # tuned on seed 0 with the shipped calibration (see results/summary.json)
 TABLES = ("entities", "invoices", "transport_docs", "packing_lists")
 DTYPES = {"hs6": str, "doc_no": str}
 
@@ -43,7 +42,7 @@ class Result:
 def analyse(tables: dict[str, pd.DataFrame], settings: Settings | None = None,
             ref: pd.DataFrame | None = None, only: set[str] | None = None) -> Result:
     if settings is None:
-        s = Settings(alert_threshold=DEFAULT_THRESHOLD)
+        s = Settings.from_yaml()     # alert_threshold etc. from configs/default.yaml
         if DEFAULT_CALIBRATION.exists():
             s = replace(s, calibration=calibrate.load(DEFAULT_CALIBRATION))
     else:

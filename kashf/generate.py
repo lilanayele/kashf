@@ -23,9 +23,11 @@ Seven typologies are planted (FATF/Egmont 2020 and 2021 indicators):
 from __future__ import annotations
 
 import argparse
+import logging
 from dataclasses import dataclass
 from datetime import date, timedelta
 from pathlib import Path
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -59,13 +61,28 @@ class Config:
     n_rings: int = 12                  # circular trading rings
     n_shell_clusters: int = 10
     start: date = date(2025, 1, 1)
+    # optional real reference table (e.g. from kashf.comtrade); None = illustrative default_table()
+    reference: Optional[pd.DataFrame] = None
+    # noise / typology knobs; the defaults reproduce the published benchmark exactly
+    price_noise_scale: float = 1.0
+    premium_rate: float = 0.03
+    clearance_rate: float = 0.02
+    premium_range: tuple[float, float] = (1.4, 2.6)
+    clearance_range: tuple[float, float] = (0.45, 0.75)
+    over_range: tuple[float, float] = (1.8, 8.0)
+    under_range: tuple[float, float] = (0.12, 0.55)
 
 
 class World:
     def __init__(self, cfg: Config):
         self.cfg = cfg
         self.rng = np.random.default_rng(cfg.seed)
-        self.ref = default_table().set_index("hs6")
+        ref = default_table() if cfg.reference is None else cfg.reference
+        need = {"851713", "847130", "901890", "392690", "610910"}   # used by the misdescription typology
+        missing = need - set(ref["hs6"])
+        if missing:
+            raise ValueError(f"reference table lacks HS6 codes the generator needs: {sorted(missing)}")
+        self.ref = ref.set_index("hs6")
         self.entities: list[dict] = []
         self.invoices: list[dict] = []
         self.docs: list[dict] = []
@@ -139,7 +156,7 @@ class World:
         return float(max(1, round(base * np.exp(self.rng.normal(0, 0.9)))))
 
     def _price(self, hs6: str) -> float:
-        sd = self.ref.loc[hs6, "log_mad"] * 1.4826
+        sd = self.ref.loc[hs6, "log_mad"] * 1.4826 * self.cfg.price_noise_scale
         return float(self.ref.loc[hs6, "ref_usd"] * np.exp(self.rng.normal(0, sd)))
 
     def _weight(self, hs6: str, qty: float) -> float:
@@ -223,10 +240,11 @@ class World:
             hs = self._hs()
             price = self._price(hs)
             r = self.rng.random()
-            if r < 0.03:                 # premium / branded goods: legitimately expensive
-                price *= self.rng.uniform(1.4, 2.6)
-            elif r < 0.05:               # clearance stock: legitimately cheap
-                price *= self.rng.uniform(0.45, 0.75)
+            c = self.cfg
+            if r < c.premium_rate:                          # premium / branded goods: legitimately expensive
+                price *= self.rng.uniform(*c.premium_range)
+            elif r < c.premium_rate + c.clearance_rate:     # clearance stock: legitimately cheap
+                price *= self.rng.uniform(*c.clearance_range)
             d = self.rng.random()
             doc = "missing" if d < 0.005 else "short" if d < 0.01 else "rounding" if d < 0.03 else "normal"
             self.add_invoice(s, b, hs, unit_price=price, doc=doc)
@@ -247,12 +265,12 @@ class World:
         for _ in range(n):  # over-invoicing: moves value from buyer to seller
             s, b = self._pick_parties()
             hs = self._hs()
-            self.add_invoice(s, b, hs, unit_price=self._price(hs) * self.rng.uniform(1.8, 8.0),
+            self.add_invoice(s, b, hs, unit_price=self._price(hs) * self.rng.uniform(*c.over_range),
                              label="over_invoicing")
         for _ in range(n):  # under-invoicing
             s, b = self._pick_parties()
             hs = self._hs()
-            self.add_invoice(s, b, hs, unit_price=self._price(hs) * self.rng.uniform(0.12, 0.55),
+            self.add_invoice(s, b, hs, unit_price=self._price(hs) * self.rng.uniform(*c.under_range),
                              label="under_invoicing")
         for i in range(n):  # phantom shipments
             s, b = self._pick_parties()
@@ -359,7 +377,9 @@ def main() -> None:
     t = generate(Config(seed=a.seed, n_invoices=a.n))
     save(t, a.out)
     vc = t["labels"]["typology"].value_counts()
-    print(f"wrote {len(t['invoices'])} invoices, {len(t['entities'])} entities -> {a.out}\n{vc.to_string()}")
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+    logging.getLogger("kashf.generate").info("wrote %d invoices, %d entities -> %s\n%s",
+                                             len(t["invoices"]), len(t["entities"]), a.out, vc.to_string())
 
 
 if __name__ == "__main__":

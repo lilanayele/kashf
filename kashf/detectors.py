@@ -9,6 +9,7 @@ so an analyst can confirm or dismiss it without rerunning anything.
 
 from __future__ import annotations
 
+import logging
 import math
 from collections import defaultdict
 from dataclasses import asdict, dataclass
@@ -18,6 +19,8 @@ import numpy as np
 import pandas as pd
 
 from kashf.config import Settings
+
+log = logging.getLogger("kashf.detectors")
 
 
 @dataclass
@@ -205,9 +208,18 @@ def _cycles(inv: pd.DataFrame, s: Settings) -> list[Signal]:
                         abs(c["quantity"] - r["quantity"]) <= s.cycle_qty_tolerance * r["quantity"]:
                     yield c
 
+        steps, capped = 0, False
         for start in rows:
+            if capped:
+                break
             stack = [(start, [start])]
             while stack:
+                steps += 1
+                if steps > s.cycle_max_expansions:   # bounded work on large or adversarial uploads
+                    log.warning("cycle search for HS %s stopped after %d steps; loops may be missed",
+                                hs, s.cycle_max_expansions)
+                    capped = True
+                    break
                 cur, path = stack.pop()
                 if len(path) > s.cycle_max_len:
                     continue

@@ -54,15 +54,23 @@
   .pill.high { background:#fbe9e7; color:var(--red) } .pill.elev { background:#fdf2e0; color:var(--amber) } .pill.low { background:#e8f5f2; color:var(--teal) }
   .note { font-size:12px; color:var(--mute); margin-top:12px }
   .ents td { font-size:13px }
+  .tabs { display:flex; gap:4px }
+  .tabs button.on { background:var(--navy); color:#fff; border-color:var(--navy) }
+  .mctl { display:flex; gap:10px; flex-wrap:wrap; padding:12px 16px; border-bottom:1px solid var(--line); align-items:center }
+  .mctl select { font:inherit; border:1px solid var(--line); border-radius:8px; padding:6px 10px; min-width:180px }
+  #mchart { width:100%; height:300px }
+  .src { font-size:12px; color:var(--teal); font-weight:600 }
 </style>
 </head>
 <body>
 <header>
   <img src="/logo.svg" alt="Kashf">
+  <div class="tabs"><button id="tInv" class="on">Invoices</button><button id="tMac">Macro view</button></div>
   <span class="sp"></span>
   <label class="btn">Upload CSVs<input id="up" type="file" multiple accept=".csv" hidden></label>
 </header>
 <main>
+ <div id="invView">
   <div class="stats" id="stats"></div>
   <div class="grid">
     <div>
@@ -85,6 +93,26 @@
     </div>
     <div class="card"><h2>Case detail</h2><div class="detail" id="detail"><div class="empty">Select an alert to see its evidence.</div></div></div>
   </div>
+ </div>
+ <div id="macView" hidden>
+  <div class="card">
+    <h2>Mirror statistics: UAE vs partner reports <span class="src" id="msrc"></span></h2>
+    <div class="mctl">
+      <label>HS6 <select id="mhs"></select></label>
+      <label>Partner <select id="mpar"></select></label>
+      <span class="reason" id="minfo"></span>
+    </div>
+    <div class="detail">
+      <svg id="mchart"></svg>
+      <div class="legend"><span><i style="border-color:var(--navy)"></i>UAE exports (UAE vs partner report)</span>
+        <span><i style="border-color:var(--gold)"></i>UAE imports</span>
+        <span><i style="border-color:var(--red);border-top-style:dashed"></i>flag threshold</span></div>
+      <div id="mflags"></div>
+      <p class="note">Mirror gap = log(importer-reported value / ((1 + CIF/FOB) × exporter-reported value)).
+        A flag is a reason to look at a country × product × year aggregate, not evidence against any company.</p>
+    </div>
+  </div>
+ </div>
 </main>
 <script>
 const $ = s => document.querySelector(s);
@@ -93,6 +121,56 @@ const usd = v => "$" + (v >= 1e6 ? (v/1e6).toFixed(2) + "M" : v >= 1e3 ? (v/1e3)
 const COL = {price:"var(--price)", route:"var(--route)", documents:"var(--documents)", graph:"var(--graph)"};
 const NAME = {price:"Price benchmark", route:"Route check", documents:"Document consistency", graph:"Counterparty network"};
 let det = "", sel = null;
+
+function tab(m) {
+  $("#invView").hidden = m; $("#macView").hidden = !m;
+  $("#tInv").classList.toggle("on", !m); $("#tMac").classList.toggle("on", m);
+  if (m && !$("#mhs").options.length) macroInit();
+}
+$("#tInv").onclick = () => tab(false); $("#tMac").onclick = () => tab(true);
+
+async function macroInit() {
+  let o;
+  try { o = await j("/api/macro/options"); }
+  catch (e) { $("#mflags").innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
+  $("#msrc").textContent = o.source + ` · ${o.pairs} pairs, ${o.flagged} flagged`;
+  $("#mhs").innerHTML = o.hs6.map(h => `<option>${esc(h)}</option>`).join("");
+  $("#mpar").innerHTML = o.partners.map(p => `<option value="${p.code}">${esc(p.iso || p.code)}</option>`).join("");
+  $("#mhs").value = o.top.hs6; $("#mpar").value = String(o.top.partner);   // open on the strongest flag
+  $("#mhs").onchange = $("#mpar").onchange = macroDraw;
+  macroDraw();
+}
+
+async function macroDraw() {
+  const d = await j(`/api/macro?hs6=${encodeURIComponent($("#mhs").value)}&partner=${$("#mpar").value}`);
+  const svg = d3.select("#mchart"); svg.selectAll("*").remove();
+  if (!d.rows.length) { $("#minfo").textContent = "no mirror pairs for this HS6 and partner"; $("#mflags").innerHTML = ""; return; }
+  $("#minfo").textContent = `CIF/FOB assumption ${(d.cif_fob_factor*100).toFixed(0)}% · threshold |gap| > ${d.gap_threshold.toFixed(2)}`;
+  const W = svg.node().clientWidth, H = 300, m = {l:44, r:16, t:12, b:28};
+  const years = [...new Set(d.rows.map(r => r.year))].sort();
+  const x = d3.scalePoint().domain(years).range([m.l, W - m.r]).padding(0.3);
+  const ext = Math.max(d.gap_threshold * 1.6, ...d.rows.map(r => Math.abs(r.mirror_gap)));
+  const y = d3.scaleLinear().domain([-ext, ext]).range([H - m.b, m.t]);
+  svg.append("g").attr("transform", `translate(0,${H - m.b})`).call(d3.axisBottom(x));
+  svg.append("g").attr("transform", `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(6));
+  [d.gap_threshold, -d.gap_threshold].forEach(t => svg.append("line").attr("x1", m.l).attr("x2", W - m.r)
+    .attr("y1", y(t)).attr("y2", y(t)).attr("stroke", "var(--red)").attr("stroke-dasharray", "4 4"));
+  svg.append("line").attr("x1", m.l).attr("x2", W - m.r).attr("y1", y(0)).attr("y2", y(0)).attr("stroke", "var(--line)");
+  for (const [dir, col] of [["uae_export", "var(--navy)"], ["uae_import", "var(--gold)"]]) {
+    const pts = d.rows.filter(r => r.direction === dir);
+    svg.append("path").datum(pts).attr("fill", "none").attr("stroke", col).attr("stroke-width", 2)
+      .attr("d", d3.line().x(r => x(r.year)).y(r => y(r.mirror_gap)));
+    svg.selectAll(null).data(pts).enter().append("circle").attr("cx", r => x(r.year)).attr("cy", r => y(r.mirror_gap))
+      .attr("r", r => r.rule_flag ? 6 : 4).attr("fill", r => r.rule_flag ? "var(--red)" : col)
+      .append("title").text(r => `${r.year} ${r.direction}: gap ${r.mirror_gap.toFixed(2)}`);
+  }
+  const f = d.rows.filter(r => r.rule_flag);
+  $("#mflags").innerHTML = f.length ? f.map(r => `<div class="sig" style="border-color:var(--red)">
+      <div class="h"><span>${r.year} · ${r.direction === "uae_export" ? "UAE exports" : "UAE imports"}</span>
+      <span>${r.if_flag ? "rules + Isolation Forest" : "rules"}</span></div>
+      <p>${esc(r.why)}</p><p class="reason">Check first: ${esc(r.benign)}</p></div>`).join("")
+    : `<p class="reason">No flags for this HS6 and partner.</p>`;
+}
 
 async function j(u, o) { const r = await fetch(u, o); if (!r.ok) throw new Error((await r.json()).detail || r.status); return r.json(); }
 

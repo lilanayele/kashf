@@ -165,3 +165,29 @@ def test_api(tmp_path, world):
     assert d["signals"] and "typology" not in d["invoice"]
     assert c.get(f"/api/network/{d['invoice']['seller_id']}").json()["nodes"]
     assert "Case summary" in c.get(f"/api/case/{a[0]['invoice_no']}").text
+
+
+def test_settings_come_from_yaml():
+    s = Settings.from_yaml()
+    assert s.alert_threshold == 0.44 and s.high_risk == ("XA", "XB", "XC")
+    assert Settings.from_yaml(price_z=3.0).price_z == 3.0
+    with pytest.raises(TypeError):
+        Settings(nope=1)
+
+
+def test_upload_size_limit(tmp_path, monkeypatch):
+    from kashf import api
+    monkeypatch.setattr(api, "load_yaml", lambda path=None: {"api": {"max_upload_mb": 0.001}})
+    client = TestClient(api.create_app())
+    big = b"invoice_no\n" + b"INV-1\n" * 2000
+    files = [("files", (f"{n}.csv", big, "text/csv")) for n in ("entities", "invoices", "transport_docs",
+                                                                  "packing_lists")]
+    r = client.post("/api/upload", files=files)
+    assert r.status_code == 413
+
+
+def test_cycle_search_is_capped(world):
+    from dataclasses import replace as dc_replace
+    s = dc_replace(Settings.from_yaml(), cycle_max_expansions=10)
+    sig = graph_detector(world["invoices"], world["entities"], s)   # must return, not hang
+    assert isinstance(sig, list)

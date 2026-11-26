@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import math
 from pathlib import Path
 
@@ -34,6 +35,8 @@ from kashf.config import Settings
 from kashf.detectors import run_all
 from kashf.generate import Config, generate
 from kashf.scoring import score_invoices
+
+log = logging.getLogger("kashf.evaluate")
 
 DETECTORS = ("price", "route", "documents", "graph")
 TYPOLOGIES = ("over_invoicing", "under_invoicing", "phantom_shipment", "multiple_invoicing",
@@ -132,15 +135,23 @@ def mispricing_curve(t: dict, ref: pd.DataFrame, score: pd.Series, thr: float, t
 
 
 # ------------------------------------------------------------------ main
-def run(n_seeds: int = 5, n: int = 20000, out: str | Path = "results") -> dict:
+def run(n_seeds: int = 5, n: int = 20000, out: str | Path = "results",
+        reference_path: str | Path | None = None, figures: bool = True) -> dict:
+    """Full protocol. reference_path = a real reference CSV (kashf.comtrade); None = illustrative table.
+
+    With a real reference, the detectors benchmark against real Comtrade unit values AND the
+    generator draws its (still synthetic) invoice prices around them.
+    """
     out = Path(out)
     (out / "figures").mkdir(parents=True, exist_ok=True)
-    s, ref = Settings(), reference.default_table()
+    s = Settings.from_yaml()
+    ref = reference.load(reference_path) if reference_path else reference.default_table()
+    gen_ref = ref if reference_path else None
     configs = ["kashf_full", "kashf_heuristic", *[f"minus_{d}" for d in DETECTORS],
                "price_only", "checklist", "isolation_forest"]
 
     # ---- tune on seed 0: per-rule calibration, then each configuration's threshold
-    t0 = generate(Config(seed=0, n_invoices=n))
+    t0 = generate(Config(seed=0, n_invoices=n, reference=gen_ref))
     sig0 = run_all(t0, ref, s)
     table = calibrate.fit(sig0, t0["labels"])
     calibrate.save(table, out / "calibration.json")
@@ -165,7 +176,7 @@ def run(n_seeds: int = 5, n: int = 20000, out: str | Path = "results") -> dict:
     per_seed: dict[str, list[dict]] = {c: [] for c in configs}
     curves, pr = [], {}
     for seed in range(1, n_seeds + 1):
-        t = generate(Config(seed=seed, n_invoices=n))
+        t = generate(Config(seed=seed, n_invoices=n, reference=gen_ref))
         sig = run_all(t, ref, s)
         lab = t["labels"].set_index("invoice_no")["typology"]
         y = (lab != "none").astype(int)
@@ -180,8 +191,8 @@ def run(n_seeds: int = 5, n: int = 20000, out: str | Path = "results") -> dict:
                 p, r, _ = precision_recall_curve(y.values, sc[c].reindex(y.index).fillna(0).values)
                 pr[c] = (p, r)
         n_pos = int(y.sum())
-        print(f"seed {seed}: {len(y)} invoices, {n_pos} laundering ({n_pos / len(y):.1%}) — "
-              f"full F1 {per_seed['kashf_full'][-1]['f1']:.3f}")
+        log.info("seed %d: %d invoices, %d laundering (%.1f%%), full F1 %.3f", seed, len(y), n_pos,
+                 100 * n_pos / len(y), per_seed["kashf_full"][-1]["f1"])
 
     def agg(rows: list[dict]) -> dict:
         res = {}
@@ -192,15 +203,121 @@ def run(n_seeds: int = 5, n: int = 20000, out: str | Path = "results") -> dict:
                 res[k] = _ms([r[k] for r in rows])
         return res
 
-    summary = {"protocol": {"tuning_seed": 0, "test_seeds": list(range(1, n_seeds + 1)), "invoices_per_seed": n},
+    summary = {"protocol": {"tuning_seed": 0, "test_seeds": list(range(1, n_seeds + 1)), "invoices_per_seed": n,
+                            "reference": str(reference_path) if reference_path else "illustrative (kashf/reference.py)"},
                "counts": per_seed["_counts"], "calibration": table,
                "thresholds": thr, "configs": {c: agg(per_seed[c]) for c in configs}}
     curve = pd.concat(curves).groupby("bin", observed=False).agg(n=("n", "sum"), recall=("recall", "mean")).reset_index()
     summary["mispricing_recall"] = curve.to_dict("records")
     (out / "summary.json").write_text(json.dumps(summary, indent=2, default=float))
     _write_md(summary, out / "results.md")
-    _figures(summary, curve, pr, out / "figures")
+    if figures:
+        _figures(summary, curve, pr, out / "figures")
     return summary
+
+
+# ------------------------------------------------------------------ robustness checks
+def _tune_and_test(s: Settings, ref: pd.DataFrame, tune_cfg: Config, test_cfgs: list[Config]) -> dict:
+    """Calibrate + pick the threshold on tune_cfg, then report full-Kashf metrics on each test config."""
+    t0 = generate(tune_cfg)
+    sig0 = run_all(t0, ref, s)
+    table = calibrate.fit(sig0, t0["labels"])
+    sc = replace(s, calibration=table)
+    y0 = (t0["labels"].set_index("invoice_no")["typology"] != "none").astype(int)
+    thr = best_threshold(y0.values, kashf_scores(t0, sig0, sc, DETECTORS).reindex(y0.index).fillna(0).values)
+    rows = []
+    for c in test_cfgs:
+        t = generate(c)
+        sig = run_all(t, ref, s)
+        lab = t["labels"].set_index("invoice_no")["typology"]
+        y = (lab != "none").astype(int)
+        m = metrics(y, kashf_scores(t, sig, sc, DETECTORS), thr, lab, None)
+        rows.append({k: m[k] for k in ("precision", "recall", "f1", "far", "avg_precision")})
+    agg = {k: _ms([r[k] for r in rows]) for k in rows[0]}
+    agg["threshold"] = thr
+    return agg
+
+
+SWEEP = {"price_z": [1.5, 2.0, 2.5, 3.0], "qty_tolerance": [0.01, 0.03, 0.05, 0.10],
+         "weight_tolerance": [0.10, 0.15, 0.25, 0.40]}
+SHIFT = {"price_noise_scale": 1.3, "premium_rate": 0.06, "clearance_rate": 0.04, "premium_range": (1.4, 3.5),
+         "over_range": (1.3, 4.0), "under_range": (0.25, 0.75), "typology_rate": 0.004}
+
+
+def robustness(n_seeds: int = 3, n: int = 20000, out: str | Path = "results",
+               reference_path: str | Path | None = None) -> dict:
+    """(1) Sensitivity of full Kashf to each hand-set threshold, one at a time (re-tuned on seed 0 each time).
+    (2) Alert-threshold sweep with everything else fixed.
+    (3) Generator shift: tune on the default generator, test on seeds drawn with different noise and
+        typology parameters (SHIFT) — a check against tuning to the generator's own quirks."""
+    out = Path(out)
+    out.mkdir(parents=True, exist_ok=True)
+    base = Settings.from_yaml()
+    ref = reference.load(reference_path) if reference_path else reference.default_table()
+    gref = ref if reference_path else None
+    tune = Config(seed=0, n_invoices=n, reference=gref)
+    tests = [Config(seed=k, n_invoices=n, reference=gref) for k in range(1, n_seeds + 1)]
+    res: dict = {"sweep": {}, "shift": {}}
+    for name, values in SWEEP.items():
+        res["sweep"][name] = {}
+        for v in values:
+            log.info("sensitivity %s=%s", name, v)
+            res["sweep"][name][str(v)] = _tune_and_test(replace(base, **{name: v}), ref, tune, tests)
+
+    # alert-threshold sweep on the default settings (calibration fixed, threshold forced)
+    t0 = generate(tune)
+    sig0 = run_all(t0, ref, base)
+    sc = replace(base, calibration=calibrate.fit(sig0, t0["labels"]))
+    thr_rows = {}
+    sets = []
+    for c in tests:
+        t = generate(c)
+        sig = run_all(t, ref, base)
+        lab = t["labels"].set_index("invoice_no")["typology"]
+        sets.append(((lab != "none").astype(int), kashf_scores(t, sig, sc, DETECTORS), lab))
+    for thr in (0.2, 0.3, 0.4, 0.44, 0.5, 0.6, 0.7, 0.8):
+        ms = [metrics(y, scr, thr, lab, None) for y, scr, lab in sets]
+        thr_rows[str(thr)] = {k: _ms([m[k] for m in ms]) for k in ("precision", "recall", "f1", "far")}
+    res["alert_threshold"] = thr_rows
+
+    log.info("generator shift test")
+    res["shift"]["same_generator"] = _tune_and_test(base, ref, tune, tests)
+    shifted = [replace(c, seed=100 + c.seed, **SHIFT) for c in tests]
+    res["shift"]["shifted_generator"] = _tune_and_test(base, ref, tune, shifted)
+    res["shift"]["shift_params"] = {k: list(v) if isinstance(v, tuple) else v for k, v in SHIFT.items()}
+    res["protocol"] = {"tuning_seed": 0, "test_seeds": [c.seed for c in tests], "invoices_per_seed": n,
+                       "reference": str(reference_path) if reference_path else "illustrative (kashf/reference.py)"}
+    (out / "robustness.json").write_text(json.dumps(res, indent=2, default=float))
+    _write_robustness_md(res, out / "robustness.md")
+    return res
+
+
+def _write_robustness_md(r: dict, path: Path) -> None:
+    p = r["protocol"]
+    L = ["# Robustness of the invoice layer (SYNTHETIC invoices)", "",
+         f"Synthetic invoices from kashf.generate; reference prices: {p['reference']}. Tuned on seed "
+         f"{p['tuning_seed']}, tested on seeds {p['test_seeds']} ({p['invoices_per_seed']:,} invoices each); "
+         "mean ± sd. Each sweep changes one setting and re-runs calibration and threshold tuning on seed 0.", "",
+         "## 1. Sensitivity to hand-set thresholds", ""]
+    for name, vals in r["sweep"].items():
+        L += [f"### {name}", "", "| Value | Precision | Recall | F1 | False-alarm rate |", "|---|---|---|---|---|"]
+        for v, m in vals.items():
+            L.append(f"| {v} | {_f(m['precision'])} | {_f(m['recall'])} | {_f(m['f1'])} | {_f(m['far'], 2, pct=True)} |")
+        L.append("")
+    L += ["## 2. Alert threshold (calibration fixed)", "",
+          "| Threshold | Precision | Recall | F1 | False-alarm rate |", "|---|---|---|---|---|"]
+    for v, m in r["alert_threshold"].items():
+        L.append(f"| {v} | {_f(m['precision'])} | {_f(m['recall'])} | {_f(m['f1'])} | {_f(m['far'], 2, pct=True)} |")
+    s = r["shift"]
+    L += ["", "## 3. Generator shift", "",
+          "Tuned on the default generator; tested on seeds from the same generator vs a shifted one "
+          f"({', '.join(f'{k}={v}' for k, v in s['shift_params'].items())}).", "",
+          "| Test data | Precision | Recall | F1 | False-alarm rate | Avg. precision |", "|---|---|---|---|---|---|"]
+    for k in ("same_generator", "shifted_generator"):
+        m = s[k]
+        L.append(f"| {k.replace('_', ' ')} | {_f(m['precision'])} | {_f(m['recall'])} | {_f(m['f1'])} | "
+                 f"{_f(m['far'], 2, pct=True)} | {_f(m['avg_precision'])} |")
+    path.write_text("\n".join(L) + "\n")
 
 
 def _ms(v: list[float]) -> dict:
@@ -210,7 +327,10 @@ def _ms(v: list[float]) -> dict:
 
 def _write_md(sm: dict, path: Path) -> None:
     C = sm["configs"]
-    L = ["# Kashf evaluation results", "",
+    L = ["# Kashf invoice-layer results (SYNTHETIC invoices)", "",
+         "Data: synthetic invoices from kashf.generate (not real trade). "
+         f"Reference prices: {sm['protocol'].get('reference', 'illustrative (kashf/reference.py)')}. "
+         "Real-data results are in results/macro/.", "",
          f"Thresholds tuned on seed 0; mean ± sd over held-out seeds {sm['protocol']['test_seeds']} "
          f"({sm['protocol']['invoices_per_seed']:,} invoices each).", "",
          "## Overall", "",
@@ -316,8 +436,14 @@ def main() -> None:
     ap.add_argument("--seeds", type=int, default=5)
     ap.add_argument("--n", type=int, default=20000)
     ap.add_argument("--out", default="results")
+    ap.add_argument("--reference", help="real reference CSV from `python -m kashf.comtrade reference`")
+    ap.add_argument("--robustness", action="store_true", help="threshold sweeps + generator-shift test")
     a = ap.parse_args()
-    run(a.seeds, a.n, a.out)
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    if a.robustness:
+        robustness(min(a.seeds, 3), a.n, a.out, a.reference)
+    else:
+        run(a.seeds, a.n, a.out, a.reference)
 
 
 if __name__ == "__main__":

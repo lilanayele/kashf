@@ -1,0 +1,17 @@
+# Top-level dependencies. Pinned, tested versions are in requirements.txt (regenerate with:
+#   uv pip compile requirements.in --python-version 3.9 -o requirements.txt )
+pandas>=2.0
+numpy>=1.26
+networkx>=3.2
+scikit-learn>=1.4
+matplotlib>=3.8
+fastapi>=0.110
+uvicorn>=0.29
+python-multipart>=0.0.9
+pyyaml>=6.0
+pyarrow>=14
+python-dotenv>=1.0
+comtradeapicall==1.4.0
+shap>=0.44
+pytest>=8
+httpx>=0.27

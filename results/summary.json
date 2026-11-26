@@ -8,7 +8,8 @@
       4,
       5
     ],
-    "invoices_per_seed": 20000
+    "invoices_per_seed": 20000,
+    "reference": "illustrative (kashf/reference.py)"
   },
   "counts": [
     {

@@ -1,4 +1,6 @@
-# Kashf evaluation results
+# Kashf invoice-layer results (SYNTHETIC invoices)
+
+Data: synthetic invoices from kashf.generate (not real trade). Reference prices: illustrative (kashf/reference.py). Real-data results are in results/macro/.
 
 Thresholds tuned on seed 0; mean ± sd over held-out seeds [1, 2, 3, 4, 5] (20,000 invoices each).
 

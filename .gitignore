@@ -6,3 +6,8 @@ __pycache__/
 data/
 output/
 !data/.gitkeep
+
+# secrets
+.env
+.env.*
+!.env.example

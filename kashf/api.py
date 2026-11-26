@@ -14,7 +14,7 @@ import pandas as pd
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import HTMLResponse, PlainTextResponse
 
-from kashf.config import Settings
+from kashf.config import Settings, load_yaml
 from kashf.detectors import link_graph
 from kashf.pipeline import DTYPES, TABLES, analyse, load_dir
 from kashf.report import entity_case, invoice_case
@@ -22,14 +22,18 @@ from kashf.report import entity_case, invoice_case
 STATIC = Path(__file__).parent / "static"
 
 
-def create_app(data_dir: str | Path | None = None) -> FastAPI:
+MACRO_DIR = Path(__file__).resolve().parent.parent / "results" / "macro"
+
+
+def create_app(data_dir: str | Path | None = None, macro_dir: str | Path | None = None) -> FastAPI:
     app = FastAPI(title="Kashf", version="0.1.0")
     state: dict = {}
+    max_bytes = int(float(load_yaml().get("api", {}).get("max_upload_mb", 25)) * 1024 * 1024)
 
     def load(tables: dict) -> None:
         tables = {k: v for k, v in tables.items() if k != "labels"}   # never expose ground truth
         state["res"] = analyse(tables)
-        state["links"], state["hubs"] = link_graph(tables["entities"], Settings())
+        state["links"], state["hubs"] = link_graph(tables["entities"], Settings.from_yaml())
 
     if data_dir:
         load(load_dir(data_dir))
@@ -128,13 +132,62 @@ def create_app(data_dir: str | Path | None = None) -> FastAPI:
                   for a, b, d in links.edges(data=True) if a in ks and b in ks]
         return {"nodes": nodes, "edges": edges}
 
+    # ---------------------------------------------------------- macro view (real Comtrade mirror data)
+    mdir = Path(macro_dir) if macro_dir else MACRO_DIR
+
+    def macro_flags() -> pd.DataFrame:
+        if "macro" not in state:
+            f = mdir / "flags.csv"
+            if not f.exists():
+                raise HTTPException(404, "No macro results yet. Run: python -m kashf.comtrade pull && "
+                                         "python -m kashf.macro")
+            state["macro"] = pd.read_csv(f, dtype={"hs6": str})
+        return state["macro"]
+
+    @app.get("/api/macro/options")
+    def macro_options():
+        m = macro_flags()
+        hs = sorted(m["hs6"].unique())
+        partners = (m[["partner", "partner_iso"]].drop_duplicates("partner").fillna({"partner_iso": ""})
+                    .sort_values("partner_iso"))
+        top = m.sort_values("rule_score", ascending=False).iloc[0]
+        return {"source": "UN Comtrade (real, annual)", "hs6": hs,
+                "top": {"hs6": str(top["hs6"]), "partner": int(top["partner"])},
+                "partners": [{"code": int(r.partner), "iso": r.partner_iso} for r in partners.itertuples()],
+                "pairs": len(m), "flagged": int(m["rule_flag"].sum())}
+
+    @app.get("/api/macro")
+    def macro_series(hs6: str, partner: int):
+        from kashf import macro as mac
+        cfg = load_yaml()["macro"]
+        m = macro_flags()
+        d = m[(m["hs6"] == hs6) & (m["partner"] == partner)].sort_values(["direction", "year"])
+        rows = []
+        for _, r in d.iterrows():
+            rows.append({"year": int(r["year"]), "direction": r["direction"],
+                         "value_exp": float(r["value_exp"]), "value_imp": float(r["value_imp"]),
+                         "mirror_gap": float(r["mirror_gap"]),
+                         "weight_gap": None if pd.isna(r["weight_gap"]) else float(r["weight_gap"]),
+                         "rule_flag": bool(r["rule_flag"]), "if_flag": bool(r.get("if_flag", False)),
+                         "why": mac.explain(r, cfg) if r["rule_flag"] else "",
+                         "benign": mac.innocent(r) if r["rule_flag"] else ""})
+        return {"hs6": hs6, "partner": partner, "gap_threshold": float(cfg["gap_threshold"]),
+                "cif_fob_factor": float(cfg["cif_fob_factor"]), "rows": rows}
+
     @app.post("/api/upload")
     async def upload(files: list[UploadFile] = File(...)):
-        got = {}
+        got, total = {}, 0
         for f in files:
             name = Path(f.filename or "").stem
             if name in TABLES:
-                got[name] = pd.read_csv(io.BytesIO(await f.read()), dtype=DTYPES)
+                data = await f.read(max_bytes - total + 1)     # never read more than the limit allows
+                total += len(data)
+                if total > max_bytes:
+                    raise HTTPException(413, f"upload too large: limit is {max_bytes // (1024 * 1024)} MB")
+                try:
+                    got[name] = pd.read_csv(io.BytesIO(data), dtype=DTYPES)
+                except Exception as e:
+                    raise HTTPException(400, f"{name}.csv could not be read as CSV: {type(e).__name__}")
         missing = [t for t in TABLES if t not in got]
         if missing:
             raise HTTPException(400, f"missing files: {', '.join(m + '.csv' for m in missing)}")
