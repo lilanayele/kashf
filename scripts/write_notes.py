@@ -39,9 +39,11 @@ def fill_readme() -> None:
     if md:
         body = md.replace("# Macro layer results: REAL UN Comtrade mirror data", "").strip()
         body = re.sub(r"^## ", "#### ", body, flags=re.M)
+        shot = ("![Macro view: UAE diamond exports to South Africa vs South Africa's reported imports]"
+                "(docs/macro_view.png)\n\n" if (ROOT / "docs" / "macro_view.png").exists() else "")
         block = (f"{START}\n### Real-data results (UN Comtrade)\n\n"
                  "*Label: real (UN Comtrade) flows; detection rates use injected distortions on those real flows.*\n\n"
-                 f"{body}\n{END}")
+                 f"{shot}{body}\n\n![Recall vs injected distortion](results/macro/recall_vs_injection.png)\n{END}")
     else:
         block = (f"{START}\n### Real-data results (UN Comtrade)\n\n"
                  f"*Pending: run `bash scripts/run_real.sh` to fill this section.*\n{END}")
@@ -55,6 +57,8 @@ def fill_readme() -> None:
 
 def pitch_notes() -> str:
     syn = synthetic()["kashf_full"]
+    rr_f = ROOT / "results" / "real_reference" / "summary.json"
+    rr = json.loads(rr_f.read_text())["configs"]["kashf_full"] if rr_f.exists() else None
     rb = robustness()["shift"]
     same, shifted = rb["same_generator"], rb["shifted_generator"]
     md = macro_md()
@@ -64,9 +68,13 @@ def pitch_notes() -> str:
     if md:
         m = re.search(r"Mirror pairs: ([\d,]+) \(eligible, both sides >= ([^:]+): ([\d,]+)\)", md)
         y = re.search(r"Years: ([^;]+); partners: (\d+); HS6 codes: (\d+)", md)
-        fr = re.search(r"Flag rate on real data: rules ([\d.]+%), Isolation Forest ([\d.]+%)", md)
+        fr = re.search(r"Flag rate on real data: rules \([a-z]+ baseline\) ([\d.]+%), Isolation Forest ([\d.]+%)", md)
+        ab = re.search(r"flag (\d+%) of real pairs", md)
+        dg = re.search(r"uae_export ([-+\d.]+) \(importer reports ([\d.]+)x.*?uae_import ([-+\d.]+) \(importer reports ([\d.]+)x", md)
         stats = {"pairs": m.group(1), "min": m.group(2), "eligible": m.group(3), "years": y.group(1),
-                 "partners": y.group(2), "hs6": y.group(3), "rule_rate": fr.group(1), "if_rate": fr.group(2)}
+                 "partners": y.group(2), "hs6": y.group(3), "rule_rate": fr.group(1), "if_rate": fr.group(2),
+                 "abs_rate": ab.group(1) if ab else "n/a", "exp_ratio": dg.group(2) if dg else "n/a",
+                 "imp_ratio": dg.group(4) if dg else "n/a"}
 
     def inj(method: str, size: float, col: str) -> str:
         if summ is None:
@@ -86,21 +94,28 @@ def pitch_notes() -> str:
                  f"{stats['years']}. *real (UN Comtrade)*")
     else:
         L.append(f"1. **Real data.** Mirror pairs from UAE and partner reports to UN Comtrade. {P}")
-    L.append("2. **Novel combination.** To my knowledge, no open tool combines country-level mirror statistics on "
-             "real trade data with invoice-level evidence checks for one trader, with a benign explanation "
-             "attached to every flag. (Say \"to my knowledge\", not \"first\".)")
-    L.append(f"3. **Measured detection on real flows.** Known misinvoicing injected into real flows: rules recall "
-             f"{inj('rules', 0.25, 'recall')} at ±25% and {inj('rules', 1.0, 'recall')} at ±100%; Isolation Forest "
-             f"{inj('iforest', 0.25, 'recall')} / {inj('iforest', 1.0, 'recall')}. PR-AUC at ±50%: rules "
-             f"{inj('rules', 0.5, 'pr_auc')}, IF {inj('iforest', 0.5, 'pr_auc')} (random = "
-             f"{inj('rules', 0.5, 'pr_auc_random')}). *real flows + injected distortion*")
-    L.append(f"4. **Invoice layer (synthetic) with an honest stress test.** F1 {syn['f1']['mean']:.2f} and false-alarm "
-             f"rate {100 * syn['far']['mean']:.2f}% on the benchmark; on test data from a shifted generator F1 drops "
-             f"{same['f1']['mean']:.2f} -> {shifted['f1']['mean']:.2f} and false alarms rise to "
-             f"{100 * shifted['far']['mean']:.2f}%. *synthetic*")
-    L.append("5. **Explainable, not accusatory.** Every alert shows the numbers behind it and the benign causes to "
-             "rule out first (re-exports, free zones, CIF/FOB, timing, classification). Kashf ranks what to look at; "
-             "a human decides.")
+    if stats:
+        L.append(f"2. **Real finding about UAE trade data.** UAE imports reconcile with partner reports (partners' "
+                 f"exports ~ {stats['imp_ratio']}x after the 10% CIF/FOB margin), but for UAE exports partners record only "
+                 f"~{stats['exp_ratio']}x of the value: re-exports are booked under the country of origin. Fixed "
+                 f"thresholds set before seeing the data flagged {stats['abs_rate']} of pairs, so Kashf compares each flow with "
+                 f"its own product's peers; that flags {stats['rule_rate']} of real pairs. *real (UN Comtrade)*")
+    else:
+        L.append(f"2. **Real finding about UAE trade data.** {P}")
+    L.append(f"3. **Honest detection limits on real flows.** Known misinvoicing injected into real flows is found only "
+             f"when it is large: recall on not-already-flagged pairs is {inj('rules', 1.0, 'recall_on_unflagged')} at "
+             f"x2 and {inj('rules', 9.0, 'recall_on_unflagged')} at x10 (Isolation Forest "
+             f"{inj('iforest', 1.0, 'recall_on_unflagged')} / {inj('iforest', 9.0, 'recall_on_unflagged')}). Country-level "
+             "statistics are too noisy for moderate mispricing, which is why Kashf adds invoice-level evidence. "
+             "*real flows + injected distortion*")
+    inv = (f"F1 {syn['f1']['mean']:.2f} with illustrative prices and "
+           + (f"{rr['f1']['mean']:.2f} with real Comtrade reference prices" if rr else "pending with real prices")
+           + f"; under generator shift F1 drops {same['f1']['mean']:.2f} -> {shifted['f1']['mean']:.2f}")
+    L.append(f"4. **Invoice layer (synthetic invoices).** {inv}. False-alarm rate {100 * syn['far']['mean']:.2f}% vs "
+             f"{100 * synthetic()['checklist']['far']['mean']:.1f}% for a manual checklist. *synthetic*")
+    L.append("5. **Explainable, not accusatory.** Every flag shows its numbers and the innocent causes to rule out "
+             "first (re-exports, free zones, CIF/FOB, estimated quantities, classification). To my knowledge no open "
+             "tool combines real mirror statistics with invoice-level evidence this way; say \"to my knowledge\".")
     L += ["", "## Top flagged real flows (for the demo)", ""]
     if cs is not None and len(cs):
         for _, r in cs.head(3).iterrows():
@@ -110,8 +125,10 @@ def pitch_notes() -> str:
     else:
         L.append(P)
     L += ["", "## 3 honest limitations", "",
-          "1. **No ground-truth labels on real data.** Real detection rates come from injected distortions; precision "
-          "counts every natural anomaly as a false alarm, so it is a lower bound.",
+          "1. **No ground-truth labels on real data, and weak detection of moderate mispricing there.** Real "
+          "detection rates come from injected distortions (precision is a lower bound); below about x3 the mirror "
+          "statistics cannot separate misinvoicing from normal reporting noise. The per-product baseline was chosen "
+          "after seeing the real data (disclosed).",
           "2. **Mirror gaps have many innocent causes.** Re-exports, free zones, origin attribution, CIF/FOB and timing "
           "all create gaps; the 10% CIF/FOB margin is an assumption.",
           f"3. **The invoice layer is still synthetic**, and its weights do not fully transfer: F1 "

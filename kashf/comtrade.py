@@ -153,17 +153,50 @@ def fetch(name: str, *, period: str, cmd: str, flow: str, reporter: Optional[str
         log.info("%s: %d rows in %.1fs", name, n, secs)
         if n >= MAX_RECORDS:
             raise ComtradeError(f"{name}: hit the {MAX_RECORDS}-row cap, result truncated; split the query")
-        if n:
-            missing = [c for c in REQUIRED if c not in df.columns]
-            if missing:
-                raise ComtradeError(f"{name}: response lacks columns {missing}; the API schema changed")
-            df = df[[c for c in KEEP if c in df.columns]].copy()
-            df["cmdCode"] = df["cmdCode"].astype(str).str.zfill(6)
+        df = _postprocess(df, name)
         RAW.mkdir(parents=True, exist_ok=True)
         df.to_parquet(path, index=False)
         time.sleep(wait)
         return df
     raise ComtradeError(f"{name}: unreachable")  # pragma: no cover
+
+
+def _postprocess(df: pd.DataFrame, name: str) -> pd.DataFrame:
+    """Keep the columns Kashf uses and normalise HS codes; raise if the schema changed."""
+    if df.empty:
+        return df
+    missing = [c for c in REQUIRED if c not in df.columns]
+    if missing:
+        raise ComtradeError(f"{name}: response lacks columns {missing}; the API schema changed")
+    df = df[[c for c in KEEP if c in df.columns]].copy()
+    df["cmdCode"] = df["cmdCode"].astype(str).str.zfill(6)
+    return df
+
+
+def import_saved(paths: list[Path]) -> dict[str, int]:
+    """Import API responses saved as JSON elsewhere (e.g. fetched from a browser on a machine whose
+    network can reach Comtrade). Each file must hold {"query": "<name>", "data": [...]} where data is
+    the API's own `data` array. Same post-processing and cache layout as `fetch`; logged as via=import."""
+    from pandas import json_normalize
+    RAW.mkdir(parents=True, exist_ok=True)
+    done = {}
+    for p in paths:
+        obj = json.loads(Path(p).read_text())
+        name = obj.get("query") or Path(p).stem.replace("kashf_", "")
+        if name == "smoke_test":
+            continue
+        rows = obj.get("data") or []
+        df = _postprocess(json_normalize(rows) if rows else pd.DataFrame(), name)
+        df.to_parquet(RAW / f"{name}.parquet", index=False)
+        params = {k: v for k, v in (obj.get("params") or {}).items() if "key" not in k.lower()}
+        rec = {"ts": obj.get("pulled", datetime.now(timezone.utc).isoformat(timespec="seconds")),
+               "query": name, "params": params, "status": "ok", "rows": len(df), "seconds": None,
+               "via": "import"}
+        with CALL_LOG.open("a") as f:
+            f.write(json.dumps(rec) + "\n")
+        done[name] = len(df)
+        log.info("imported %s: %d rows", name, len(df))
+    return done
 
 
 # ------------------------------------------------------------------ pulls
@@ -236,7 +269,38 @@ def load_raw(raw: Path = RAW) -> pd.DataFrame:
         frames.append(d)
     if not frames:
         raise ComtradeError(f"all cached Comtrade files in {raw} are empty")
-    return tidy(pd.concat(frames, ignore_index=True))
+    return harmonise_units(tidy(pd.concat(frames, ignore_index=True)))
+
+
+def harmonise_units(t: pd.DataFrame) -> pd.DataFrame:
+    """Blank quantities reported in a unit other than the HS6 code's usual one.
+
+    Reporters sometimes give the same product in different quantity units (e.g. furniture in
+    pieces by most, in kg by a few). Dividing value by such a quantity produces absurd unit values,
+    so a quantity counts only when its unit matches the most common unit for that HS6 in the
+    world-export rows. Net weights (always kg) are untouched. The count of blanked quantities is
+    logged and shown in the data card via the missing-quantity share.
+    """
+    t = t.copy()
+    unit = t["qty_unit"].fillna("").astype(str).str.lower()
+    ref = t[t["source"] == "world"] if (t["source"] == "world").any() else t
+    modal = (ref.assign(u=unit[ref.index]).groupby("hs6")["u"]
+             .agg(lambda x: x.mode().iloc[0] if len(x.mode()) else ""))
+    expected = t["hs6"].map(modal).fillna("")
+    bad = t["qty"].notna() & (unit != expected)
+    if bad.any():
+        log.info("blanked %d quantities (%.1f%%) reported in a non-standard unit for their HS6",
+                 int(bad.sum()), 100 * bad.mean())
+    t.loc[bad, "qty"] = np.nan
+    # Comtrade fills missing quantities/weights with its own estimates; a unit value or weight gap
+    # built on an estimate is not evidence about the trade, so estimates are dropped too.
+    qe = t["qty"].notna() & t["qty_estimated"].astype("boolean").fillna(False).astype(bool)
+    we = t["net_wgt_kg"].notna() & t["wgt_estimated"].astype("boolean").fillna(False).astype(bool)
+    log.info("dropped %d Comtrade-estimated quantities (%.1f%%) and %d estimated net weights (%.1f%%)",
+             int(qe.sum()), 100 * qe.mean(), int(we.sum()), 100 * we.mean())
+    t.loc[qe, "qty"] = np.nan
+    t.loc[we, "net_wgt_kg"] = np.nan
+    return t
 
 
 def tidy(df: pd.DataFrame) -> pd.DataFrame:
@@ -386,7 +450,13 @@ def data_card(flows: pd.DataFrame, path: Path, cfg: Optional[dict] = None) -> No
     codes = json.loads((RAW / "hs_codes.json").read_text()) if (RAW / "hs_codes.json").exists() else {}
     L = ["# Data card: UN Comtrade data used by Kashf", "",
          "| Field | Value |", "|---|---|",
-         "| Source | UN Comtrade, final annual data, HS classification, via the `comtradeapicall` package |",
+         "| Source | UN Comtrade API v1 (`data/v1/get/C/A/HS`), final annual data, HS classification |",
+         "| Retrieval | " + ("API responses saved on the user's machine and imported with `python -m kashf.comtrade "
+                           "import` (same parameters and post-processing as `pull`)"
+                           if any(c.get("via") == "import" for c in ok) else "`python -m kashf.comtrade pull` "
+                           "(comtradeapicall)") + " |",
+         "| Excluded values | quantities in a non-standard unit for the HS6, and Comtrade-estimated quantities and "
+         "net weights (`isQtyEstimated`, `isNetWgtEstimated`) |",
          f"| Pull date(s) (UTC) | {', '.join(pulled) or 'not recorded'} |",
          f"| API calls logged | {len(ok)} successful, {sum(c['status'] == 'error' for c in calls)} failed "
          "(data/raw/calls.jsonl) |",
@@ -444,6 +514,9 @@ def main(argv: Optional[list[str]] = None) -> int:
     r.add_argument("--out", default=str(ROOT / "data" / "reference_comtrade.csv"))
     r.add_argument("--allow-partial", action="store_true")
     sub.add_parser("card", help="write docs/DATA_CARD.md from the cache")
+    im = sub.add_parser("import", help="import API responses saved as JSON (see import_saved)")
+    im.add_argument("files", nargs="+")
+    im.add_argument("--codes", help="comma-separated HS6 list actually requested (for hs_codes.json)")
     a = ap.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
@@ -462,6 +535,14 @@ def main(argv: Optional[list[str]] = None) -> int:
         ref = build_reference(load_raw(), allow_partial=a.allow_partial)
         write_reference(ref, Path(a.out))
         log.info("wrote %s (%d HS6 codes, real Comtrade values)", a.out, len(ref))
+    elif a.cmd == "import":
+        done = import_saved([Path(f) for f in a.files])
+        if a.codes:
+            codes = [c.strip().zfill(6) for c in a.codes.split(",") if c.strip()]
+            base = hs_codes()
+            (RAW / "hs_codes.json").write_text(json.dumps(
+                {"base": base, "added_top_reexports": [c for c in codes if c not in base]}, indent=2))
+        log.info("imported %d files: %s", len(done), ", ".join(f"{k}={v}" for k, v in sorted(done.items())))
     elif a.cmd == "card":
         data_card(load_raw(), ROOT / "docs" / "DATA_CARD.md")
         log.info("wrote docs/DATA_CARD.md")

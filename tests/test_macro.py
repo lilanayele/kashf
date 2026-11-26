@@ -13,7 +13,7 @@ import pytest
 
 from kashf import comtrade, macro
 
-CFG = {"cif_fob_factor": 0.10, "min_flow_usd": 100_000, "gap_threshold": math.log(1.5),
+CFG = {"baseline": "absolute", "gap_z_threshold": 3.0, "cif_fob_factor": 0.10, "min_flow_usd": 100_000, "gap_threshold": math.log(1.5),
        "weight_gap_threshold": math.log(1.5), "uv_z_threshold": 3.0, "iforest_trees": 50,
        "iforest_contamination": 0.1, "injection_sizes": [0.1, 1.0], "injection_share": 0.2,
        "injection_repeats": 2}
@@ -178,3 +178,17 @@ def test_macro_api(flows, tmp_path):
     flagged = [x for x in d["rows"] if x["rule_flag"]]
     assert flagged and "DEU reports imports from UAE" in flagged[0]["why"]
     assert TestClient(create_app(macro_dir=tmp_path / "none")).get("/api/macro/options").status_code == 404
+
+
+def test_relative_baseline_removes_shared_offset(flows):
+    dist = comtrade.global_distribution(flows)
+    pairs = macro.eligible(macro.add_unit_value_z(macro.build_pairs(flows), dist), CFG["min_flow_usd"])
+    shifted = pairs.copy()
+    m = shifted["direction"] == "uae_export"
+    shifted.loc[m, "mirror_gap"] -= 2.0          # every export pair shares a big offset (re-export attribution)
+    absolute = macro.rules(shifted, CFG)
+    rel = macro.rules(shifted, {**CFG, "baseline": "relative"})
+    assert absolute.loc[m, "r_gap"].ge(1).all()   # absolute thresholds flag them all
+    top = rel.sort_values("r_gap", ascending=False).iloc[0]
+    assert (top["partner"], top["hs6"], top["year"]) == (276, "851713", 2023)   # only the planted pair stands out
+    assert rel.loc[m, "r_gap"].ge(1).sum() == 1

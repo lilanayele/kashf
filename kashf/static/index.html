@@ -106,7 +106,8 @@
       <svg id="mchart"></svg>
       <div class="legend"><span><i style="border-color:var(--navy)"></i>UAE exports (UAE vs partner report)</span>
         <span><i style="border-color:var(--gold)"></i>UAE imports</span>
-        <span><i style="border-color:var(--red);border-top-style:dashed"></i>flag threshold</span></div>
+        <span><i style="border-color:var(--mute);border-top-style:dashed"></i>typical gap for this product and direction (peer median)</span>
+        <span><i style="border-color:var(--red)"></i>red dot = flagged</span></div>
       <div id="mflags"></div>
       <p class="note">Mirror gap = log(importer-reported value / ((1 + CIF/FOB) × exporter-reported value)).
         A flag is a reason to look at a country × product × year aggregate, not evidence against any company.</p>
@@ -145,19 +146,26 @@ async function macroDraw() {
   const d = await j(`/api/macro?hs6=${encodeURIComponent($("#mhs").value)}&partner=${$("#mpar").value}`);
   const svg = d3.select("#mchart"); svg.selectAll("*").remove();
   if (!d.rows.length) { $("#minfo").textContent = "no mirror pairs for this HS6 and partner"; $("#mflags").innerHTML = ""; return; }
-  $("#minfo").textContent = `CIF/FOB assumption ${(d.cif_fob_factor*100).toFixed(0)}% · threshold |gap| > ${d.gap_threshold.toFixed(2)}`;
+  const rel = d.baseline === "relative";
+  $("#minfo").textContent = `CIF/FOB assumption ${(d.cif_fob_factor*100).toFixed(0)}% · ` + (rel
+    ? `flag = gap more than ${d.gap_z_threshold} robust SD from the same product's peers, or a unit-value outlier`
+    : `threshold |gap| > ${d.gap_threshold.toFixed(2)}`);
   const W = svg.node().clientWidth, H = 300, m = {l:44, r:16, t:12, b:28};
   const years = [...new Set(d.rows.map(r => r.year))].sort();
   const x = d3.scalePoint().domain(years).range([m.l, W - m.r]).padding(0.3);
-  const ext = Math.max(d.gap_threshold * 1.6, ...d.rows.map(r => Math.abs(r.mirror_gap)));
+  const ext = Math.max(d.gap_threshold * 1.6, ...d.rows.map(r => Math.abs(r.mirror_gap)),
+                       ...d.rows.map(r => Math.abs(r.peer_median ?? 0))) * 1.08;
   const y = d3.scaleLinear().domain([-ext, ext]).range([H - m.b, m.t]);
   svg.append("g").attr("transform", `translate(0,${H - m.b})`).call(d3.axisBottom(x));
   svg.append("g").attr("transform", `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(6));
-  [d.gap_threshold, -d.gap_threshold].forEach(t => svg.append("line").attr("x1", m.l).attr("x2", W - m.r)
+  if (!rel) [d.gap_threshold, -d.gap_threshold].forEach(t => svg.append("line").attr("x1", m.l).attr("x2", W - m.r)
     .attr("y1", y(t)).attr("y2", y(t)).attr("stroke", "var(--red)").attr("stroke-dasharray", "4 4"));
   svg.append("line").attr("x1", m.l).attr("x2", W - m.r).attr("y1", y(0)).attr("y2", y(0)).attr("stroke", "var(--line)");
   for (const [dir, col] of [["uae_export", "var(--navy)"], ["uae_import", "var(--gold)"]]) {
     const pts = d.rows.filter(r => r.direction === dir);
+    const pm = pts.find(r => r.peer_median !== null);
+    if (rel && pm) svg.append("line").attr("x1", m.l).attr("x2", W - m.r).attr("y1", y(pm.peer_median))
+      .attr("y2", y(pm.peer_median)).attr("stroke", col).attr("stroke-dasharray", "4 4").attr("opacity", 0.7);
     svg.append("path").datum(pts).attr("fill", "none").attr("stroke", col).attr("stroke-width", 2)
       .attr("d", d3.line().x(r => x(r.year)).y(r => y(r.mirror_gap)));
     svg.selectAll(null).data(pts).enter().append("circle").attr("cx", r => x(r.year)).attr("cy", r => y(r.mirror_gap))

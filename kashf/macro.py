@@ -19,8 +19,12 @@ Features (all logs are natural logs)
 
 Detectors
 
-    rules        flag if |mirror_gap| > T_gap, or |weight_gap| > T_w, or max |uv_z| > T_z.
-                 Thresholds are fixed in the YAML before looking at results (not tuned).
+    rules        baseline 'relative' (default): flag if the mirror or weight gap is more than T robust SD
+                 from the median of the same HS6 x direction, or max |uv_z| > T_z.
+                 baseline 'absolute': raw |mirror_gap| > T_gap or |weight_gap| > T_w.
+                 The absolute thresholds were set before seeing real data; on real UAE data they flag
+                 most pairs (systematic re-export attribution), so the relative baseline is the
+                 primary detector and both are reported (results/macro/macro_results.md).
     iforest      Isolation Forest over the same features; per-flag explanation by SHAP if
                  installed, otherwise by each feature's robust deviation.
 
@@ -58,7 +62,7 @@ log = logging.getLogger("kashf.macro")
 UAE = 784
 # Comtrade partner codes that are aggregates or special areas, not countries
 NON_COUNTRY = {0, 97, 837, 838, 839, 899}
-FEATURES = ["mirror_gap", "weight_gap", "uv_z_exp", "uv_z_imp"]
+FEATURES = ["gap_rz", "wgap_rz", "uv_z_exp", "uv_z_imp"]   # relative gaps (see relative())
 MAD_K = 1.4826
 
 
@@ -150,11 +154,41 @@ def eligible(p: pd.DataFrame, min_flow: float) -> pd.DataFrame:
 
 
 # ------------------------------------------------------------------ detectors
-def rules(p: pd.DataFrame, cfg: dict) -> pd.DataFrame:
-    """Rules baseline: each feature divided by its fixed threshold; a ratio >= 1 is a flag."""
+def relative(p: pd.DataFrame, min_group: int = 10) -> pd.DataFrame:
+    """Robust z of the mirror and weight gaps within the same HS6 x direction.
+
+    On real UAE data the gaps are dominated by systematic reporting differences (partners record
+    UAE re-exports under the country of origin, so UAE-export gaps are strongly negative for most
+    products). Comparing each pair with what is normal for that product and direction removes this
+    shared offset; a pair is unusual only if it departs from its peers. Groups smaller than
+    min_group pairs fall back to the pooled direction-level baseline.
+    """
     out = p.copy()
-    out["r_gap"] = out["mirror_gap"].abs() / float(cfg["gap_threshold"])
-    out["r_wgt"] = out["weight_gap"].abs() / float(cfg["weight_gap_threshold"])
+    for col, z in (("mirror_gap", "gap_rz"), ("weight_gap", "wgap_rz")):
+        x = out[col]
+        g = out.groupby(["hs6", "direction"])[col]
+        med, mad, n = g.transform("median"), g.transform(lambda v: (v - v.median()).abs().median()), g.transform("count")
+        gd = out.groupby("direction")[col]
+        dmed, dmad = gd.transform("median"), gd.transform(lambda v: (v - v.median()).abs().median())
+        small = n < min_group
+        med, mad = med.where(~small, dmed), mad.where(~small, dmad)
+        out[z] = (x - med) / (MAD_K * np.maximum(mad, 0.05))
+        if col == "mirror_gap":
+            out["gap_peer_median"] = med
+    return out
+
+
+def rules(p: pd.DataFrame, cfg: dict) -> pd.DataFrame:
+    """Rules baseline. baseline='relative' (default): gap z within HS6 x direction vs gap_z_threshold;
+    baseline='absolute': raw gaps vs the fixed ln-ratio thresholds. A ratio >= 1 is a flag."""
+    out = p.copy()
+    if cfg.get("baseline", "relative") == "relative":
+        out = relative(out)
+        out["r_gap"] = out["gap_rz"].abs() / float(cfg["gap_z_threshold"])
+        out["r_wgt"] = out["wgap_rz"].abs() / float(cfg["gap_z_threshold"])
+    else:
+        out["r_gap"] = out["mirror_gap"].abs() / float(cfg["gap_threshold"])
+        out["r_wgt"] = out["weight_gap"].abs() / float(cfg["weight_gap_threshold"])
     out["r_uv"] = out[["uv_z_exp", "uv_z_imp"]].abs().max(axis=1, skipna=True) / float(cfg["uv_z_threshold"])
     out["rule_score"] = out[["r_gap", "r_wgt", "r_uv"]].max(axis=1, skipna=True).fillna(0.0)
     out["rule_flag"] = out["rule_score"] >= 1.0
@@ -162,6 +196,8 @@ def rules(p: pd.DataFrame, cfg: dict) -> pd.DataFrame:
 
 
 def feature_matrix(p: pd.DataFrame) -> tuple[np.ndarray, list[str]]:
+    if "gap_rz" not in p:
+        p = relative(p)
     X = p[FEATURES].copy()
     cols = list(FEATURES)
     for c in FEATURES:
@@ -227,7 +263,11 @@ def explain(r: pd.Series, cfg: dict) -> str:
         else:
             s = (f"UAE reports imports from {who} of {_usd(r['value_imp'])}; {who} reports exports to UAE "
                  f"of {_usd(r['value_exp'])} (x{1 + c:.2f} CIF/FOB = {_usd((1 + c) * r['value_exp'])})")
-        reasons.append(f"{s}: importer side is {np.exp(r['mirror_gap']):.2f}x the expected value")
+        msg = f"{s}: importer side is {np.exp(r['mirror_gap']):.2f}x the expected value"
+        if "gap_rz" in r and np.isfinite(r.get("gap_peer_median", np.nan)):
+            msg += (f", while the typical ratio for this product and direction is "
+                    f"{np.exp(r['gap_peer_median']):.2f}x ({r['gap_rz']:+.1f} robust SD from peers)")
+        reasons.append(msg)
     if r.get("r_wgt", 0) >= 1 and np.isfinite(r["weight_gap"]):
         reasons.append(f"net weight differs {np.exp(r['weight_gap']):.2f}x between the two reports "
                        f"({r['wgt_imp']:,.0f} kg importer vs {r['wgt_exp']:,.0f} kg exporter)")
@@ -367,6 +407,7 @@ def run(out: Path, cfg_all: Optional[dict] = None, seed: int = 0) -> dict:
     log.info("%d mirror pairs, %d eligible (both sides >= %s)", len(pairs), len(elig), _usd(cfg["min_flow_usd"]))
 
     r = rules(elig, cfg)
+    r_abs = rules(elig, {**cfg, "baseline": "absolute"})
     f, model, cols = iforest(elig, cfg, seed)
     flagged = r.assign(if_score=f["if_score"], if_flag=f["if_flag"])
     desc = dict(default_table()[["hs6", "description"]].values)
@@ -391,7 +432,10 @@ def run(out: Path, cfg_all: Optional[dict] = None, seed: int = 0) -> dict:
              "partners": int(elig["partner"].nunique()), "hs6": int(elig["hs6"].nunique()),
              "rule_flag_rate": float(r["rule_flag"].mean()), "if_flag_rate": float(f["if_flag"].mean()),
              "agree": float((r["rule_flag"] == f["if_flag"]).mean()),
-             "median_abs_gap": float(elig["mirror_gap"].abs().median())}
+             "median_abs_gap": float(elig["mirror_gap"].abs().median()),
+             "absolute_flag_rate": float(r_abs["rule_flag"].mean()),
+             "median_gap_by_direction": {k: float(v) for k, v in elig.groupby("direction")["mirror_gap"].median().items()},
+             "baseline": cfg.get("baseline", "relative")}
     _write_md(stats, summ, cs, cfg, out / "macro_results.md")
     _figure(summ, out / "recall_vs_injection.png")
     return {"stats": stats, "summary": summ, "case_study": cs}
@@ -399,24 +443,35 @@ def run(out: Path, cfg_all: Optional[dict] = None, seed: int = 0) -> dict:
 
 def _write_md(st: dict, summ: pd.DataFrame, cs: pd.DataFrame, cfg: dict, path: Path) -> None:
     L = ["# Macro layer results: REAL UN Comtrade mirror data", "",
-         "Data source: UN Comtrade (annual, HS, total level), pulled with `python -m kashf.comtrade pull`. "
-         "See docs/DATA_CARD.md for coverage and caveats.", "",
+         "Label: **real (UN Comtrade)**. Annual HS data at total level (partner2 = World, all customs procedures, "
+         "all transport modes), cached in data/raw/ by kashf.comtrade (pulled through the API, or saved API "
+         "responses imported with `python -m kashf.comtrade import`). Comtrade-estimated quantities and weights and "
+         "quantities in non-standard units are excluded. Coverage and caveats: docs/DATA_CARD.md.", "",
          f"- Mirror pairs: {st['pairs']:,} (eligible, both sides >= {_usd(cfg['min_flow_usd'])}: {st['eligible']:,})",
          f"- Years: {', '.join(map(str, st['years']))}; partners: {st['partners']}; HS6 codes: {st['hs6']}",
          f"- Median |log mirror gap|: {st['median_abs_gap']:.2f} "
          f"(sides typically differ by {np.exp(st['median_abs_gap']):.2f}x after the CIF/FOB adjustment)",
-         f"- Flag rate on real data: rules {st['rule_flag_rate']:.1%}, Isolation Forest {st['if_flag_rate']:.1%}; "
-         f"agreement {st['agree']:.1%}", "",
+         f"- Median mirror gap by direction: " + ", ".join(
+             f"{k} {v:+.2f} (importer reports {np.exp(v):.2f}x the CIF-adjusted exporter value)"
+             for k, v in st["median_gap_by_direction"].items()),
+         f"- Flag rate on real data: rules ({st['baseline']} baseline) {st['rule_flag_rate']:.1%}, "
+         f"Isolation Forest {st['if_flag_rate']:.1%}; agreement {st['agree']:.1%}", "",
+         "**Fixed thresholds failed on real data.** The absolute thresholds set before seeing real data "
+         f"(|gap| > ln 1.5) flag {st['absolute_flag_rate']:.0%} of real pairs, because UAE-export gaps are "
+         "systematically negative: partners record most UAE re-exports under the country of origin. After "
+         "seeing this, the rules compare each pair with the median of the same HS6 and direction "
+         "(robust z). This change was made after looking at the real data and is disclosed here.", "",
          "## Detection of injected misinvoicing (semi-synthetic: real flows + known distortion)", "",
          f"{cfg['injection_share']:.0%} of eligible pairs have the importer-reported value pushed up or down by the "
-         f"stated size; mean over {cfg['injection_repeats']} repeats. Thresholds fixed in configs/default.yaml "
-         "before the run (not tuned). Precision is a lower bound: naturally anomalous real flows count as false "
+         f"stated size; mean over {cfg['injection_repeats']} repeats. Thresholds from configs/default.yaml, not tuned "
+         "on the injected data. Precision is a lower bound: naturally anomalous real flows count as false "
          "positives. 'Recall on unflagged' counts only injected pairs the rules did not already flag before "
          "injection.", "",
          "| Method | Distortion | Recall | Recall on unflagged | Precision (lower bound) | Flag rate | PR-AUC | PR-AUC (random) |",
          "|---|---|---|---|---|---|---|---|"]
     for _, x in summ.sort_values(["size", "method"]).iterrows():
-        L.append(f"| {x['method']} | +/-{x['size']:.0%} | {x['recall']:.2f} | {x['recall_on_unflagged']:.2f} | "
+        size = f"x/÷{1 + x['size']:.0f}" if x["size"] >= 1.5 else f"+/-{x['size']:.0%}"
+        L.append(f"| {x['method']} | {size} | {x['recall']:.2f} | {x['recall_on_unflagged']:.2f} | "
                  f"{x['precision_lb']:.2f} | {x['flag_rate']:.1%} | {x['pr_auc']:.2f} | {x['pr_auc_random']:.2f} |")
     L += ["", "## Case study: top 10 flagged UAE flows on the real data", "",
           "Flags are reasons to look, not findings. Each row lists the benign explanations to rule out first.", ""]
@@ -437,11 +492,12 @@ def _figure(summ: pd.DataFrame, path: Path) -> None:
     fig, ax = plt.subplots(figsize=(5, 3), dpi=200)
     for m, col in (("rules", "#0E2A47"), ("iforest", "#2A9D8F")):
         d = summ[summ["method"] == m].sort_values("size")
-        ax.plot(d["size"] * 100, d["recall"], marker="o", color=col, label=m)
-    ax.set_xlabel("Injected distortion of importer value (%)")
-    ax.set_ylabel("Recall")
+        ax.plot(1 + d["size"], d["recall_on_unflagged"], marker="o", color=col, label=m)
+    ax.set_xscale("log")
+    ax.set_xlabel("Injected distortion factor of importer value (x or ÷)")
+    ax.set_ylabel("Recall (pairs not already flagged)")
     ax.set_ylim(0, 1.05)
-    ax.set_title("Real Comtrade flows + injected misinvoicing", fontsize=9)
+    ax.set_title("Real UN Comtrade flows + injected misinvoicing", fontsize=9)
     ax.grid(alpha=0.25)
     ax.legend(frameon=False, fontsize=8)
     fig.tight_layout()

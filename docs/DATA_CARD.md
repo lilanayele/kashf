@@ -1,17 +1,41 @@
 # Data card: UN Comtrade data used by Kashf
 
-**Status: not yet pulled.** This file is regenerated from the cached data by
-`python -m kashf.comtrade card` (step 4 of `scripts/run_real.sh`), with the pull date, the number of
-API calls, and coverage per query family and year (rows, reporters, partners, HS6 codes, share of
-missing quantities and weights, share of Comtrade-estimated weights).
-
 | Field | Value |
 |---|---|
-| Source | UN Comtrade, final annual data, HS classification, via the `comtradeapicall` package |
-| Queries | UAE (784) X/RX/M/RM by partner; all partners' M/X with the UAE; all reporters' X to World |
-| Years | 2020-2024 (configs/default.yaml) |
-| HS6 codes | the 20 in kashf/reference.py, plus the top 30 UAE re-export codes |
-| Filters | partner2 = World, customs procedure = C00, mode of transport = all |
+| Source | UN Comtrade API v1 (`data/v1/get/C/A/HS`), final annual data, HS classification |
+| Retrieval | API responses saved on the user's machine and imported with `python -m kashf.comtrade import` (same parameters and post-processing as `pull`) |
+| Excluded values | quantities in a non-standard unit for the HS6, and Comtrade-estimated quantities and net weights (`isQtyEstimated`, `isNetWgtEstimated`) |
+| Pull date(s) (UTC) | 2026-11-26 |
+| API calls logged | 16 successful, 0 failed (data/raw/calls.jsonl) |
+| Years requested | 2020, 2021, 2022, 2023, 2024 |
+| HS6 codes | 20 base (kashf/reference.py) + 23 top UAE re-export codes |
+| Filters | partner2 = World, customs procedure = C00 (all), mode of transport = 0 (all) |
+| Rows cached | 102,930 |
+
+## Coverage by query family and year
+
+| Source | Year | Rows | Reporters | Partners | HS6 | Missing qty | Missing net weight | Estimated weight |
+|---|---|---|---|---|---|---|---|---|
+| mirror | 2020 | 5,027 | 164 | 1 | 39 | 37% | 24% | 22% |
+| mirror | 2021 | 5,340 | 166 | 1 | 42 | 36% | 22% | 21% |
+| mirror | 2022 | 5,852 | 164 | 1 | 43 | 37% | 24% | 20% |
+| mirror | 2023 | 6,052 | 163 | 1 | 43 | 39% | 26% | 22% |
+| mirror | 2024 | 5,741 | 147 | 1 | 43 | 37% | 24% | 20% |
+| uae | 2020 | 10,726 | 1 | 218 | 39 | 50% | 0% | 0% |
+| uae | 2021 | 11,566 | 1 | 222 | 39 | 50% | 2% | 2% |
+| uae | 2022 | 13,181 | 1 | 225 | 43 | 50% | 2% | 2% |
+| uae | 2023 | 13,005 | 1 | 225 | 43 | 49% | 1% | 0% |
+| world | 2020 | 5,058 | 169 | 1 | 39 | 45% | 34% | 30% |
+| world | 2021 | 5,146 | 170 | 1 | 42 | 45% | 35% | 31% |
+| world | 2022 | 5,530 | 168 | 1 | 43 | 46% | 34% | 28% |
+| world | 2023 | 5,573 | 166 | 1 | 43 | 46% | 36% | 29% |
+| world | 2024 | 5,133 | 149 | 1 | 43 | 46% | 36% | 28% |
+
+## UAE reporting
+
+- UAE-reported flows (X/RX/M/RM) found for: 2020, 2021, 2022, 2023
+- Years with no UAE report (mirror pairs impossible): 2024
+- Re-exports in UAE-reported exports: 29% of X + RX value
 
 ## Caveats (read before interpreting any mirror gap)
 
@@ -35,3 +59,4 @@ missing quantities and weights, share of Comtrade-estimated weights).
 - **Reporting coverage.** The UAE and some partners report with a lag; the latest year may be incomplete.
 - **What a flag means.** A flagged pair is a country x product x year aggregate that merits a closer look.
   It is not evidence that any company or person laundered money.
+

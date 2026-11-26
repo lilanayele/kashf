@@ -178,10 +178,13 @@ def create_app(data_dir: str | Path | None = None, macro_dir: str | Path | None 
                          "value_exp": float(r["value_exp"]), "value_imp": float(r["value_imp"]),
                          "mirror_gap": float(r["mirror_gap"]),
                          "weight_gap": None if pd.isna(r["weight_gap"]) else float(r["weight_gap"]),
+                         "peer_median": None if pd.isna(r.get("gap_peer_median", float("nan")))
+                         else float(r["gap_peer_median"]),
                          "rule_flag": bool(r["rule_flag"]), "if_flag": bool(r.get("if_flag", False)),
                          "why": mac.explain(r, cfg) if r["rule_flag"] else "",
                          "benign": mac.innocent(r) if r["rule_flag"] else ""})
         return {"hs6": hs6, "partner": partner, "gap_threshold": float(cfg["gap_threshold"]),
+                "baseline": cfg.get("baseline", "relative"), "gap_z_threshold": float(cfg.get("gap_z_threshold", 3.0)),
                 "cif_fob_factor": float(cfg["cif_fob_factor"]), "rows": rows}
 
     @app.post("/api/upload")

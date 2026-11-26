@@ -1,6 +1,7 @@
 # Kashf default configuration. Every threshold the code uses lives here.
 # Invoice-layer values marked (tuned) are re-chosen on the tuning seed by `kashf evaluate`.
-# Macro-layer values are FIXED a priori (not tuned on the evaluation data); see docs/DATA_CARD.md.
+# Macro-layer values were fixed before the real-data run; the switch to the relative baseline was made
+# after seeing real data (absolute thresholds flagged most pairs) and is disclosed in the results.
 
 invoice:
   # price benchmark
@@ -39,11 +40,13 @@ comtrade:
 macro:
   cif_fob_factor: 0.10        # documented assumption: imports (CIF) ~10% above exports (FOB)
   min_flow_usd: 100000        # ignore pairs where either side is below this value
-  gap_threshold: 0.405        # |log mirror gap| > ln(1.5): sides differ by more than 50%
+  baseline: relative          # relative = robust z within HS6 x direction (primary); absolute = raw thresholds
+  gap_z_threshold: 3.0        # relative: |gap z| vs peers of the same HS6 and direction
+  gap_threshold: 0.405        # absolute: |log mirror gap| > ln(1.5); set before seeing real data
   weight_gap_threshold: 0.405 # |log weight gap| > ln(1.5)
   uv_z_threshold: 3.0         # |robust z| of a flow's unit value vs the global HS6 distribution
   iforest_trees: 300
   iforest_contamination: 0.05
-  injection_sizes: [0.10, 0.25, 0.50, 1.00]
+  injection_sizes: [0.10, 0.25, 0.50, 1.00, 2.00, 4.00, 9.00]   # +10% ... 10x (up or down)
   injection_share: 0.05       # share of eligible pairs distorted in each injection run
   injection_repeats: 5

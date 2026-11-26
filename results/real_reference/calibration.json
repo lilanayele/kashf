@@ -1,0 +1,22 @@
+{
+  "circular_trade": 0.98,
+  "doc_reused": 0.98,
+  "high_risk_party": 0.07196969696969698,
+  "implausible_dates": 0.9761904761904762,
+  "implausible_unit_weight": 0.9743589743589743,
+  "linked_parties": 0.8623188405797102,
+  "no_transport_doc": 0.25949367088607594,
+  "over_priced|z2-3": 0.123046875,
+  "over_priced|z3-4": 0.5376344086021505,
+  "over_priced|z4-5": 0.8709677419354839,
+  "over_priced|z5-7": 0.967741935483871,
+  "over_priced|z7-inf": 0.75,
+  "quantity_mismatch": 0.02,
+  "under_priced|z2-3": 0.05856832971800434,
+  "under_priced|z3-4": 0.32653061224489793,
+  "under_priced|z4-5": 0.6666666666666666,
+  "under_priced|z5-7": 0.8333333333333334,
+  "under_priced|z7-inf": 0.6666666666666666,
+  "unknown_vessel": 0.9761904761904762,
+  "weight_mismatch": 0.8723404255319149
+}
