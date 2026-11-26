@@ -35,7 +35,7 @@ import pandas as pd
 from kashf.reference import default_table
 
 PARTNERS = ["IN", "CN", "PK", "SA", "OM", "IQ", "KE", "ET", "TR", "GB", "DE", "US", "HK", "SG", "EG"]
-HIGH_RISK = ["XA", "XB", "XC"]  # illustrative high-risk jurisdictions (see config.py)
+HIGH_RISK = ["IR", "MM", "YE"]  # synthetic companies placed in FATF-listed jurisdictions (configs/fatf_lists.yaml)
 HUBS = ["OM", "SA", "SG", "HK", "IN"]
 VESSELS = ["MSC Aurora", "Maersk Halifax", "CMA CGM Tigris", "Hapag Al Zubara", "COSCO Pride",
            "ONE Harmony", "Evergreen Ever Gentle", "Yang Ming Wish", "MSC Gulsun", "Maersk Essen"]

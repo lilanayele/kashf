@@ -1,0 +1,35 @@
+# FATF lists used by Kashf's route detector and checklist baseline (ISO 3166-1 alpha-2 codes).
+# Update after each FATF plenary (February, June, October) with scripts/update_fatf_lists.py,
+# then review the diff by hand before committing.
+as_of: "2026-10-30"
+checked: "2026-11-26"
+sources:
+  call_for_action: https://www.fatf-gafi.org/en/publications/High-risk-and-other-monitored-jurisdictions/call-for-action-october-2026.html
+  increased_monitoring: https://www.fatf-gafi.org/en/publications/High-risk-and-other-monitored-jurisdictions/increased-monitoring-october-2026.html
+
+# "Black list": High-Risk Jurisdictions subject to a Call for Action
+call_for_action:
+  KP: {name: "Democratic People's Republic of Korea", measure: countermeasures}
+  IR: {name: Iran, measure: countermeasures}
+  MM: {name: Myanmar, measure: enhanced due diligence}
+
+# "Grey list": Jurisdictions under Increased Monitoring
+increased_monitoring:
+  AO: Angola
+  BO: Bolivia
+  BA: Bosnia and Herzegovina
+  CM: Cameroon
+  HT: Haiti
+  IQ: Iraq
+  KE: Kenya
+  KW: Kuwait
+  LA: Lao PDR
+  LB: Lebanon
+  NP: Nepal
+  PG: Papua New Guinea
+  SS: South Sudan
+  SY: Syria
+  VE: Venezuela
+  VN: Vietnam
+  VG: Virgin Islands (UK)
+  YE: Yemen

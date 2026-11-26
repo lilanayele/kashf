@@ -120,6 +120,7 @@ Label: **real (UN Comtrade)**. Annual HS data at total level (partner2 = World, 
 - Years: 2020, 2021, 2022, 2023; partners: 156; HS6 codes: 43
 - Median |log mirror gap|: 1.18 (sides typically differ by 3.25x after the CIF/FOB adjustment)
 - Median mirror gap by direction: uae_export -1.41 (importer reports 0.24x the CIF-adjusted exporter value), uae_import +0.01 (importer reports 1.01x the CIF-adjusted exporter value)
+- UAE exports, re-exports reported explicitly: re-exports (RX) are 34% of the UAE-reported export value in these pairs. Median gap against X + RX -1.41 (partner reports 0.24x); against domestic exports X only -0.89 (0.41x; 5,581 pairs with X > 0)
 - Flag rate on real data: rules (relative baseline) 9.3%, Isolation Forest 5.0%; agreement 93.4%
 
 **Fixed thresholds failed on real data.** The absolute thresholds set before seeing real data (|gap| > ln 1.5) flag 84% of real pairs, because UAE-export gaps are systematically negative: partners record most UAE re-exports under the country of origin. After seeing this, the rules compare each pair with the median of the same HS6 and direction (robust z). This change was made after looking at the real data and is disclosed here.

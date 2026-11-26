@@ -119,10 +119,16 @@ def build_pairs(flows: pd.DataFrame, cif_fob: float = 0.10) -> pd.DataFrame:
                                  pairs["rx_value_exp"] / pairs["value_exp"], np.nan)
     pairs = pairs.drop(columns=["rx_value_imp"]).rename(columns={"rx_value_exp": "rx_value"})
     pairs["mirror_gap"] = np.log(pairs["value_imp"] / ((1 + cif_fob) * pairs["value_exp"]))
+    # UAE re-exports reported explicitly: the same gap against UAE domestic exports (X) only.
+    # If partners book re-exports under the country of origin, the X-only gap is the fairer comparison.
+    x_only = (pairs["value_exp"] - pairs["rx_value"]).where(pairs["direction"] == "uae_export")
+    pairs["value_exp_x_only"] = x_only
+    with np.errstate(divide="ignore", invalid="ignore"):
+        pairs["mirror_gap_x_only"] = np.log(pairs["value_imp"] / ((1 + cif_fob) * x_only.where(x_only > 0)))
     pairs["weight_gap"] = np.log(pairs["wgt_imp"] / pairs["wgt_exp"])
     return pairs[["direction", "partner", "partner_iso", "hs6", "year", "value_exp", "value_imp", "wgt_exp",
                   "wgt_imp", "qty_exp", "qty_imp", "rx_value", "rx_share", "wgt_est_exp", "wgt_est_imp",
-                  "mirror_gap", "weight_gap"]]
+                  "mirror_gap", "value_exp_x_only", "mirror_gap_x_only", "weight_gap"]]
 
 
 def add_unit_value_z(pairs: pd.DataFrame, dist: pd.DataFrame, cif_fob: float = 0.10) -> pd.DataFrame:
@@ -434,6 +440,11 @@ def run(out: Path, cfg_all: Optional[dict] = None, seed: int = 0) -> dict:
              "agree": float((r["rule_flag"] == f["if_flag"]).mean()),
              "median_abs_gap": float(elig["mirror_gap"].abs().median()),
              "absolute_flag_rate": float(r_abs["rule_flag"].mean()),
+             "uae_export_median_gap_x_plus_rx": float(elig.loc[elig["direction"] == "uae_export", "mirror_gap"].median()),
+             "uae_export_median_gap_x_only": float(elig.loc[elig["direction"] == "uae_export", "mirror_gap_x_only"].median()),
+             "uae_export_pairs_with_x": int(elig.loc[elig["direction"] == "uae_export", "mirror_gap_x_only"].notna().sum()),
+             "uae_export_rx_share_of_value": float(elig.loc[elig["direction"] == "uae_export", "rx_value"].sum()
+                                                   / elig.loc[elig["direction"] == "uae_export", "value_exp"].sum()),
              "median_gap_by_direction": {k: float(v) for k, v in elig.groupby("direction")["mirror_gap"].median().items()},
              "baseline": cfg.get("baseline", "relative")}
     _write_md(stats, summ, cs, cfg, out / "macro_results.md")
@@ -465,6 +476,11 @@ def _write_md(st: dict, summ: pd.DataFrame, cs: pd.DataFrame, cfg: dict, path: P
          f"- Median mirror gap by direction: " + ", ".join(
              f"{k} {v:+.2f} (importer reports {np.exp(v):.2f}x the CIF-adjusted exporter value)"
              for k, v in st["median_gap_by_direction"].items()),
+         f"- UAE exports, re-exports reported explicitly: re-exports (RX) are {st['uae_export_rx_share_of_value']:.0%} of "
+         f"the UAE-reported export value in these pairs. Median gap against X + RX {st['uae_export_median_gap_x_plus_rx']:+.2f} "
+         f"(partner reports {np.exp(st['uae_export_median_gap_x_plus_rx']):.2f}x); against domestic exports X only "
+         f"{st['uae_export_median_gap_x_only']:+.2f} ({np.exp(st['uae_export_median_gap_x_only']):.2f}x; "
+         f"{st['uae_export_pairs_with_x']:,} pairs with X > 0)",
          f"- Flag rate on real data: rules ({st['baseline']} baseline) {st['rule_flag_rate']:.1%}, "
          f"Isolation Forest {st['if_flag_rate']:.1%}; agreement {st['agree']:.1%}", "",
          "**Fixed thresholds failed on real data.** The absolute thresholds set before seeing real data "

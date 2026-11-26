@@ -6,8 +6,8 @@
 invoice:
   # price benchmark
   price_z: 2.0                # |robust z| at which an invoice line is flagged (calibration weighs it)
-  # route (illustrative codes; load the current FATF lists in production)
-  high_risk: [XA, XB, XC]
+  # route: "fatf" = union of the FATF call-for-action and increased-monitoring lists (configs/fatf_lists.yaml)
+  high_risk: fatf
   max_legs: 4
   # documents
   qty_tolerance: 0.03         # invoice vs transport-document quantity

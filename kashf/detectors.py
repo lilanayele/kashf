@@ -64,16 +64,17 @@ def price_detector(inv: pd.DataFrame, ref: pd.DataFrame, s: Settings) -> list[Si
 def route_detector(inv: pd.DataFrame, s: Settings) -> list[Signal]:
     out: list[Signal] = []
     hr = set(s.high_risk)
+    note = f" ({s.high_risk_note})" if s.high_risk_note else ""
     for row in inv.itertuples(index=False):
         legs = str(row.route).split(">")
         ends = {legs[0], legs[-1]} & hr
         transit = set(legs[1:-1]) & hr
         if ends:
             out.append(Signal(row.invoice_no, "route", "high_risk_party", 0.45,
-                              f"Counterparty located in high-risk jurisdiction {', '.join(sorted(ends))}."))
+                              f"Counterparty located in high-risk jurisdiction {', '.join(sorted(ends))}{note}."))
         if transit:
             out.append(Signal(row.invoice_no, "route", "high_risk_transit", 0.35,
-                              f"Goods transit high-risk jurisdiction {', '.join(sorted(transit))} (route {row.route})."))
+                              f"Goods transit high-risk jurisdiction {', '.join(sorted(transit))}{note} (route {row.route})."))
         mids = legs[1:-1]
         seen = [c for i, c in enumerate(mids) if c in mids[:i] or c in (legs[0], legs[-1])]
         if seen:

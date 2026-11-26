@@ -16,6 +16,10 @@
     "agree": 0.9342037627223193,
     "median_abs_gap": 1.1787304093327047,
     "absolute_flag_rate": 0.841163770946849,
+    "uae_export_median_gap_x_plus_rx": -1.4129995679607619,
+    "uae_export_median_gap_x_only": -0.8921727402512474,
+    "uae_export_pairs_with_x": 5581,
+    "uae_export_rx_share_of_value": 0.3366619994263416,
     "median_gap_by_direction": {
       "uae_export": -1.4129995679607619,
       "uae_import": 0.00830814836691647

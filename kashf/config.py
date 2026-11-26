@@ -13,6 +13,26 @@ from typing import Any, Optional, Union
 DEFAULT_CONFIG = Path(__file__).resolve().parent.parent / "configs" / "default.yaml"
 
 
+FATF_LISTS = Path(__file__).resolve().parent.parent / "configs" / "fatf_lists.yaml"
+
+
+def fatf_lists(path: Optional[Union[str, Path]] = None) -> dict[str, Any]:
+    """FATF call-for-action and increased-monitoring lists (configs/fatf_lists.yaml), with their date."""
+    import yaml
+
+    p = Path(path) if path else FATF_LISTS
+    d = yaml.safe_load(p.read_text())
+    for k in ("as_of", "sources", "call_for_action", "increased_monitoring"):
+        if not d.get(k):
+            raise ValueError(f"{p.name} is missing '{k}'")
+    return d
+
+
+def fatf_high_risk(path: Optional[Union[str, Path]] = None) -> tuple[str, ...]:
+    d = fatf_lists(path)
+    return tuple(sorted(set(d["call_for_action"]) | set(d["increased_monitoring"])))
+
+
 def load_yaml(path: Optional[Union[str, Path]] = None) -> dict[str, Any]:
     """Load the YAML config: the given path, else $KASHF_CONFIG, else configs/default.yaml at the repo root."""
     import yaml
@@ -28,7 +48,8 @@ class Settings:
     # price benchmark
     price_z: float = 2.0
     # route
-    high_risk: tuple[str, ...] = ("XA", "XB", "XC")
+    high_risk: tuple[str, ...] = ("XA", "XB", "XC")   # placeholder; from_yaml loads the real FATF lists
+    high_risk_note: str = ""              # e.g. "FATF lists as of 2026-10-30", shown in evidence
     max_legs: int = 4
     # documents
     qty_tolerance: float = 0.03
@@ -55,7 +76,10 @@ class Settings:
         unknown = set(sec) - known
         if unknown:
             raise ValueError(f"unknown invoice settings in config: {sorted(unknown)}")
-        if "high_risk" in sec:
+        if sec.get("high_risk") == "fatf":
+            sec["high_risk"] = fatf_high_risk()
+            sec["high_risk_note"] = f"FATF lists as of {fatf_lists()['as_of']}"
+        elif "high_risk" in sec:
             sec["high_risk"] = tuple(sec["high_risk"])
         sec.update(overrides)
         return cls(**sec)
